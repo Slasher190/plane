@@ -27,7 +27,12 @@ export const WEB_URL = encodeURI(`${WEB_BASE_URL}${WEB_BASE_PATH}`);
 export const WEBSITE_URL = process.env.VITE_WEBSITE_URL || "https://oneplace.roinetinsurance.in";
 // support email
 export const SUPPORT_EMAIL = process.env.VITE_SUPPORT_EMAIL || "insurancesupport@roinetinsurance.in";
-// marketing links (white-label: point to Oneplace, not Plane)
-export const MARKETING_PRICING_PAGE_LINK = process.env.VITE_MARKETING_PRICING_PAGE_LINK || "https://oneplace.roinetinsurance.in";
-export const MARKETING_CONTACT_US_PAGE_LINK = process.env.VITE_MARKETING_CONTACT_US_PAGE_LINK || "https://oneplace.roinetinsurance.in";
-export const MARKETING_PLANE_ONE_PAGE_LINK = process.env.VITE_MARKETING_PLANE_ONE_PAGE_LINK || "https://oneplace.roinetinsurance.in";
+// marketing / help links (white-label: Oneplace / Roinet — not Plane)
+export const MARKETING_PRICING_PAGE_LINK = process.env.VITE_MARKETING_PRICING_PAGE_LINK || WEBSITE_URL;
+export const MARKETING_CONTACT_US_PAGE_LINK = process.env.VITE_MARKETING_CONTACT_US_PAGE_LINK || WEBSITE_URL;
+export const MARKETING_PLANE_ONE_PAGE_LINK = process.env.VITE_MARKETING_PLANE_ONE_PAGE_LINK || WEBSITE_URL;
+export const DOCS_URL = process.env.VITE_DOCS_URL || WEBSITE_URL;
+export const FORUM_URL = process.env.VITE_FORUM_URL || WEBSITE_URL;
+export const CHANGELOG_URL = process.env.VITE_CHANGELOG_URL || WEBSITE_URL;
+export const TERMS_OF_SERVICE_URL = process.env.VITE_TERMS_OF_SERVICE_URL || WEBSITE_URL;
+export const PRIVACY_POLICY_URL = process.env.VITE_PRIVACY_POLICY_URL || WEBSITE_URL;

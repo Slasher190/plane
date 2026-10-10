@@ -1,0 +1,37 @@
+# Oneplace CE image build — contexts relative to this file under deployments/oneplace/
+services:
+  web:
+    image: ${DOCKERHUB_USER:-oneplace}/plane-frontend:${APP_RELEASE:-oneplace-1}
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile.web
+
+  space:
+    image: ${DOCKERHUB_USER:-oneplace}/plane-space:${APP_RELEASE:-oneplace-1}
+    build:
+      context: ../..
+      dockerfile: apps/space/Dockerfile.space
+
+  admin:
+    image: ${DOCKERHUB_USER:-oneplace}/plane-admin:${APP_RELEASE:-oneplace-1}
+    build:
+      context: ../..
+      dockerfile: apps/admin/Dockerfile.admin
+
+  live:
+    image: ${DOCKERHUB_USER:-oneplace}/plane-live:${APP_RELEASE:-oneplace-1}
+    build:
+      context: ../..
+      dockerfile: apps/live/Dockerfile.live
+
+  api:
+    image: ${DOCKERHUB_USER:-oneplace}/plane-backend:${APP_RELEASE:-oneplace-1}
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile.api
+
+  proxy:
+    image: ${DOCKERHUB_USER:-oneplace}/plane-proxy:${APP_RELEASE:-oneplace-1}
+    build:
+      context: ../../apps/proxy
+      dockerfile: Dockerfile.ce

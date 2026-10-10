@@ -38,7 +38,8 @@ function EquationView({ node }: { node: { attrs: EquationAttrs } }) {
 
 export const EquationExtension = Node.create({
   name: "equation",
-  group: "block",
+  group: "inline",
+  inline: true,
   atom: true,
   selectable: true,
 
@@ -51,22 +52,19 @@ export const EquationExtension = Node.create({
   addAttributes() {
     return {
       latex: { default: "" },
-      display: { default: true },
+      display: { default: false },
     };
   },
 
   parseHTML() {
-    return [{ tag: 'div[data-type="equation"]' }, { tag: 'span[data-type="equation"]' }];
+    return [{ tag: 'span[data-type="equation"]' }, { tag: 'div[data-type="equation"]' }];
   },
 
-  renderHTML({ node, HTMLAttributes }) {
-    const tag = node.attrs.display ? "div" : "span";
+  renderHTML({ HTMLAttributes }) {
     return [
-      tag,
+      "span",
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         "data-type": "equation",
-        "data-latex": node.attrs.latex,
-        "data-display": node.attrs.display ? "true" : "false",
       }),
     ];
   },
@@ -82,7 +80,7 @@ export const EquationExtension = Node.create({
         ({ commands }) =>
           commands.insertContent({
             type: this.name,
-            attrs: { latex: attrs.latex ?? "", display: attrs.display ?? true },
+            attrs: { latex: attrs.latex ?? "", display: attrs.display ?? false },
           }),
     };
   },
@@ -95,6 +93,14 @@ export const EquationExtension = Node.create({
         getAttributes: (match) => ({
           latex: match[1]?.trim() ?? "",
           display: true,
+        }),
+      }),
+      nodeInputRule({
+        find: /(?:^|[^$])\$([^$\n]+)\$$/,
+        type: this.type,
+        getAttributes: (match) => ({
+          latex: match[1]?.trim() ?? "",
+          display: false,
         }),
       }),
     ];

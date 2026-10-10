@@ -9,9 +9,9 @@ import { observer } from "mobx-react";
 import Link from "next/link";
 import { HelpCircle, MessageSquare, MoveLeft } from "lucide-react";
 import { Transition } from "@headlessui/react";
-import { WEB_BASE_URL } from "@plane/constants";
+import { DOCS_URL, FORUM_URL, SUPPORT_EMAIL, WEB_BASE_URL } from "@plane/constants";
 // plane internal packages
-import { GithubIcon, NewTabIcon, PageIcon } from "@plane/propel/icons";
+import { NewTabIcon, PageIcon } from "@plane/propel/icons";
 import { Tooltip } from "@plane/propel/tooltip";
 import { cn } from "@plane/utils";
 // hooks
@@ -21,18 +21,18 @@ import { useInstance, useTheme } from "@/hooks/store";
 const helpOptions = [
   {
     name: "Documentation",
-    href: "https://docs.plane.so/",
+    href: DOCS_URL,
     Icon: PageIcon,
   },
   {
-    name: "Join our Forum",
-    href: "https://forum.plane.so",
+    name: "Support",
+    href: FORUM_URL,
     Icon: MessageSquare,
   },
   {
-    name: "Report a bug",
-    href: "https://github.com/makeplane/plane/issues/new/choose",
-    Icon: GithubIcon,
+    name: "Contact",
+    href: `mailto:${SUPPORT_EMAIL}`,
+    Icon: MessageSquare,
   },
 ];
 
