@@ -19,6 +19,7 @@ import xml from "highlight.js/lib/languages/xml";
 import yaml from "highlight.js/lib/languages/yaml";
 import { common, createLowlight } from "lowlight";
 import { CheckIcon } from "lucide-react";
+import { marked } from "marked";
 import { useEffect, useMemo, useState } from "react";
 import { CopyIcon } from "@plane/propel/icons";
 import { Tooltip } from "@plane/propel/tooltip";
@@ -47,6 +48,16 @@ lowlight.register("css", css);
 lowlight.register("html", xml);
 lowlight.register("xml", xml);
 
+marked.setOptions({ gfm: true, breaks: true });
+
+function renderMarkdown(source: string) {
+  const html = marked.parse(source || "", { async: false }) as string;
+  return html
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/javascript:/gi, "");
+}
+
 const LANGUAGE_OPTIONS = [
   "plaintext",
   "typescript",
@@ -65,6 +76,10 @@ const LANGUAGE_OPTIONS = [
   "mermaid",
 ];
 
+function stopEditorEvent(event: React.SyntheticEvent) {
+  event.stopPropagation();
+}
+
 export function CodeBlockComponent({ node, updateAttributes }: NodeViewProps) {
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
@@ -73,7 +88,12 @@ export function CodeBlockComponent({ node, updateAttributes }: NodeViewProps) {
   const attrs = node.attrs as TCodeBlockAttributes;
   const language = (attrs.language || "plaintext") as string;
   const isMermaid = language === "mermaid";
+  const isMarkdown = language === "markdown" || language === "md";
   const source = node.textContent;
+  const markdownHtml = useMemo(
+    () => (isMarkdown && showPreview ? renderMarkdown(source) : ""),
+    [isMarkdown, showPreview, source]
+  );
 
   useEffect(() => {
     if (!isMermaid || !showPreview) {
@@ -125,11 +145,21 @@ export function CodeBlockComponent({ node, updateAttributes }: NodeViewProps) {
   };
 
   return (
-    <NodeViewWrapper key={attrs[ECodeBlockAttributeNames.ID]} className="code-block group/code relative">
-      <div className="absolute top-2 left-2 z-10 flex items-center gap-1" contentEditable={false}>
+    <NodeViewWrapper className="code-block group/code relative" data-code-id={attrs[ECodeBlockAttributeNames.ID]}>
+      <div
+        role="group"
+        aria-label="Code block controls"
+        className="code-block-chrome absolute top-2 left-2 z-10 flex items-center gap-1"
+        contentEditable={false}
+        onMouseDown={stopEditorEvent}
+        onPointerDown={stopEditorEvent}
+      >
         <select
-          className="rounded-md border border-subtle bg-layer-1 px-2 py-1 text-xs text-primary"
+          className="text-xs rounded-md border border-subtle bg-layer-1 px-2 py-1 text-primary"
           value={language}
+          contentEditable={false}
+          onMouseDown={stopEditorEvent}
+          onPointerDown={stopEditorEvent}
           onChange={(e) => updateAttributes({ language: e.target.value })}
         >
           {languageList.map((lang) => (
@@ -138,13 +168,14 @@ export function CodeBlockComponent({ node, updateAttributes }: NodeViewProps) {
             </option>
           ))}
         </select>
-        {isMermaid ? (
+        {isMermaid || isMarkdown ? (
           <button
             type="button"
-            className="rounded-md border border-subtle bg-layer-1 px-2 py-1 text-xs"
+            className="text-xs rounded-md border border-subtle bg-layer-1 px-2 py-1"
+            onMouseDown={stopEditorEvent}
             onClick={() => setShowPreview((v) => !v)}
           >
-            {showPreview ? "Hide preview" : "Show preview"}
+            {showPreview ? "Edit source" : "Preview"}
           </button>
         ) : null}
       </div>
@@ -170,14 +201,27 @@ export function CodeBlockComponent({ node, updateAttributes }: NodeViewProps) {
       {isMermaid && showPreview ? (
         <div className="mt-2 overflow-x-auto rounded-t-lg bg-layer-2 p-4 text-primary" contentEditable={false}>
           {mermaidError ? (
-            <pre className="whitespace-pre-wrap text-xs text-danger-primary">{mermaidError}</pre>
+            <pre className="text-xs whitespace-pre-wrap text-danger-primary">{mermaidError}</pre>
           ) : (
             <div dangerouslySetInnerHTML={{ __html: mermaidSvg }} />
           )}
         </div>
       ) : null}
 
-      <pre className={cn("my-2 rounded-lg bg-layer-3 p-4 pt-10 text-primary", isMermaid && showPreview && "mt-0 rounded-t-none")}>
+      {isMarkdown && showPreview ? (
+        <div
+          className="markdown-preview prose-sm my-2 max-w-none rounded-lg bg-layer-2 p-4 pt-12 text-primary prose"
+          contentEditable={false}
+          dangerouslySetInnerHTML={{ __html: markdownHtml }}
+        />
+      ) : null}
+
+      <pre
+        className={cn(
+          "my-2 rounded-lg bg-layer-3 p-4 pt-10 text-primary",
+          (isMermaid || isMarkdown) && showPreview && "sr-only"
+        )}
+      >
         <NodeViewContent as="code" className="whitespace-pre-wrap" />
       </pre>
     </NodeViewWrapper>

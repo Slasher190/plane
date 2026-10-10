@@ -17,7 +17,14 @@ lowlight.register("ts", ts);
 
 export const CustomCodeBlockExtension = CodeBlockLowlight.extend({
   addNodeView() {
-    return ReactNodeViewRenderer(CodeBlockComponent);
+    return ReactNodeViewRenderer(CodeBlockComponent, {
+      // Keep language menus and preview toggles from being swallowed by the editor.
+      stopEvent: ({ event }) => {
+        const target = event.target as HTMLElement | null;
+        if (!target?.closest) return false;
+        return Boolean(target.closest("select, option, button, input, a, label, .code-block-chrome"));
+      },
+    });
   },
 
   addKeyboardShortcuts() {

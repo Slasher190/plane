@@ -506,3 +506,58 @@ span[data-name][data-type="emoji"] img {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Rendered markdown blocks (Notion-like). ProseMirror forces pre-wrap, so reset it here. */
+.markdown-preview,
+.markdown-preview * {
+  white-space: normal;
+}
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4 {
+  font-weight: 650;
+  margin: 0.8em 0 0.35em;
+}
+.markdown-preview h1 {
+  font-size: 1.6em;
+}
+.markdown-preview h2 {
+  font-size: 1.3em;
+}
+.markdown-preview p,
+.markdown-preview ul,
+.markdown-preview ol {
+  margin: 0.4em 0;
+}
+.markdown-preview a {
+  color: var(--color-accent-primary, #3b82f6);
+  text-decoration: underline;
+}
+.markdown-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75em 0;
+  display: block;
+  overflow-x: auto;
+}
+.markdown-preview th,
+.markdown-preview td {
+  border: 1px solid var(--color-border-subtle, #3f3f46);
+  padding: 0.4em 0.6em;
+  text-align: left;
+  vertical-align: top;
+}
+.markdown-preview th {
+  font-weight: 600;
+}
+.markdown-preview pre,
+.markdown-preview code {
+  white-space: pre-wrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.markdown-preview pre {
+  padding: 0.75em;
+  border-radius: 0.5em;
+  background: var(--color-layer-3, #18181b);
+}
