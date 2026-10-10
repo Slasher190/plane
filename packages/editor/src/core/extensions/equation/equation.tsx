@@ -6,9 +6,9 @@
 
 import { mergeAttributes, Node, nodeInputRule } from "@tiptap/core";
 import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
-import katex from "katex";
+import { renderToString as renderKatex } from "katex";
 import { useMemo } from "react";
-import "katex/dist/katex.min.css";
+// KaTeX CSS is loaded via @plane/editor/styles in browser apps — not here (breaks live Node).
 
 type EquationAttrs = { latex: string; display: boolean };
 
@@ -17,7 +17,7 @@ function EquationView({ node }: NodeViewProps) {
   const display = Boolean(node.attrs.display);
   const html = useMemo(() => {
     try {
-      return katex.renderToString(latex || "", {
+      return renderKatex(latex || "", {
         throwOnError: false,
         displayMode: display,
       });
@@ -29,7 +29,7 @@ function EquationView({ node }: NodeViewProps) {
   return (
     <NodeViewWrapper
       as={display ? "div" : "span"}
-      className={display ? "my-3 text-center overflow-x-auto" : "inline-block px-0.5"}
+      className={display ? "my-3 overflow-x-auto text-center" : "inline-block px-0.5"}
       data-type="equation"
     >
       <span contentEditable={false} dangerouslySetInnerHTML={{ __html: html }} />
