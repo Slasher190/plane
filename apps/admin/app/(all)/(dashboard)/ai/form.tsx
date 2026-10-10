@@ -60,9 +60,9 @@ const PROVIDERS: {
   {
     id: "ollama",
     label: "Ollama",
-    description: "Local server. Type the model name yourself.",
-    baseUrl: "http://host.docker.internal:11434/v1",
-    keyHelp: "Ollama does not check this. Any value works, such as ollama.",
+    description: "Ollama Cloud. API key and base URL. Type the model name.",
+    baseUrl: "https://ollama.com/v1",
+    keyHelp: "Ollama Cloud API key from ollama.com/settings/keys",
   },
 ];
 
@@ -150,7 +150,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
                 value={value}
                 onChange={onChange}
                 ref={ref}
-                placeholder="llama3.2, openai/gpt-4o-mini, ..."
+                placeholder="Type the model name"
                 className="w-full rounded-md font-medium"
               />
             )}
@@ -188,8 +188,8 @@ export function InstanceAIForm(props: IInstanceAIForm) {
             )}
           />
           <p className="text-11 text-tertiary">
-            OpenRouter: https://openrouter.ai/api/v1. Gateway: http://litellm:4000/v1. Ollama:
-            http://host.docker.internal:11434/v1. Azure: your resource endpoint.
+            OpenRouter: https://openrouter.ai/api/v1. Ollama Cloud: https://ollama.com/v1. Gateway:
+            http://litellm:4000/v1. Azure: your resource endpoint.
           </p>
         </div>
       </div>

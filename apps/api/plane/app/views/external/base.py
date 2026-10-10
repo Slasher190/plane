@@ -78,7 +78,7 @@ class LiteLLMProvider(LLMProvider):
 
 
 class OllamaProvider(LLMProvider):
-    """Local Ollama server. The model name is whatever the admin types."""
+    """Ollama Cloud (https://ollama.com/v1). The model name is whatever the admin types."""
 
     name = "Ollama"
     models: List[str] = []
@@ -149,7 +149,7 @@ def get_llm_config() -> Tuple[str | None, str | None, str | None, str | None]:
     if not base_url and provider_name in ("litellm", "openrouter", "bedrock", "azure"):
         base_url = os.environ.get("LLM_BASE_URL", "http://litellm:4000/v1")
     if not base_url and provider_name == "ollama":
-        base_url = os.environ.get("OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1")
+        base_url = os.environ.get("OLLAMA_BASE_URL", "https://ollama.com/v1")
 
     return api_key, model, provider_key, base_url
 
