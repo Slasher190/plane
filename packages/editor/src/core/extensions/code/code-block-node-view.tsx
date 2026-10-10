@@ -23,6 +23,7 @@ import { marked } from "marked";
 import { useEffect, useMemo, useState } from "react";
 import { CopyIcon } from "@plane/propel/icons";
 import { Tooltip } from "@plane/propel/tooltip";
+import { CustomSelect } from "@plane/ui";
 import { cn } from "@plane/utils";
 import type { TCodeBlockAttributes } from "./types";
 import { ECodeBlockAttributeNames } from "./types";
@@ -80,7 +81,7 @@ function stopEditorEvent(event: React.SyntheticEvent) {
   event.stopPropagation();
 }
 
-export function CodeBlockComponent({ node, updateAttributes }: NodeViewProps) {
+export function CodeBlockComponent({ node, updateAttributes, editor, getPos }: NodeViewProps) {
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [mermaidSvg, setMermaidSvg] = useState<string>("");
@@ -127,6 +128,41 @@ export function CodeBlockComponent({ node, updateAttributes }: NodeViewProps) {
     };
   }, [isMermaid, showPreview, source]);
 
+  useEffect(() => {
+    if (showPreview || (!isMarkdown && !isMermaid)) return;
+    const onSelection = () => {
+      const { $from } = editor.state.selection;
+      let inside = false;
+      for (let depth = $from.depth; depth > 0; depth -= 1) {
+        if ($from.node(depth).type.name === node.type.name) {
+          inside = true;
+          break;
+        }
+      }
+      if (!inside) setShowPreview(true);
+    };
+    editor.on("selectionUpdate", onSelection);
+    return () => {
+      editor.off("selectionUpdate", onSelection);
+    };
+  }, [editor, isMarkdown, isMermaid, node.type.name, showPreview]);
+
+  const enterSource = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setShowPreview(false);
+    const pos = getPos();
+    if (typeof pos === "number") {
+      window.requestAnimationFrame(() => {
+        editor
+          .chain()
+          .focus()
+          .setTextSelection(pos + 1)
+          .run();
+      });
+    }
+  };
+
   const languageList = useMemo(() => {
     if (LANGUAGE_OPTIONS.includes(language)) return LANGUAGE_OPTIONS;
     return [language, ...LANGUAGE_OPTIONS];
@@ -154,30 +190,19 @@ export function CodeBlockComponent({ node, updateAttributes }: NodeViewProps) {
         onMouseDown={stopEditorEvent}
         onPointerDown={stopEditorEvent}
       >
-        <select
-          className="text-xs rounded-md border border-subtle bg-layer-1 px-2 py-1 text-primary"
+        <CustomSelect
           value={language}
-          contentEditable={false}
-          onMouseDown={stopEditorEvent}
-          onPointerDown={stopEditorEvent}
-          onChange={(e) => updateAttributes({ language: e.target.value })}
+          onChange={(next: string) => updateAttributes({ language: next })}
+          label={language}
+          buttonClassName="border border-subtle bg-layer-1 !rounded-md px-2 py-1 text-xs"
+          maxHeight="lg"
         >
           {languageList.map((lang) => (
-            <option key={lang} value={lang}>
+            <CustomSelect.Option key={lang} value={lang}>
               {lang}
-            </option>
+            </CustomSelect.Option>
           ))}
-        </select>
-        {isMermaid || isMarkdown ? (
-          <button
-            type="button"
-            className="text-xs rounded-md border border-subtle bg-layer-1 px-2 py-1"
-            onMouseDown={stopEditorEvent}
-            onClick={() => setShowPreview((v) => !v)}
-          >
-            {showPreview ? "Edit source" : "Preview"}
-          </button>
-        ) : null}
+        </CustomSelect>
       </div>
       <Tooltip tooltipContent="Copy code">
         <button
@@ -199,7 +224,11 @@ export function CodeBlockComponent({ node, updateAttributes }: NodeViewProps) {
       </Tooltip>
 
       {isMermaid && showPreview ? (
-        <div className="mt-2 overflow-x-auto rounded-t-lg bg-layer-2 p-4 text-primary" contentEditable={false}>
+        <div
+          className="mt-2 overflow-x-auto rounded-t-lg bg-layer-2 p-4 text-primary"
+          contentEditable={false}
+          onDoubleClick={enterSource}
+        >
           {mermaidError ? (
             <pre className="text-xs whitespace-pre-wrap text-danger-primary">{mermaidError}</pre>
           ) : (
@@ -210,8 +239,10 @@ export function CodeBlockComponent({ node, updateAttributes }: NodeViewProps) {
 
       {isMarkdown && showPreview ? (
         <div
-          className="markdown-preview prose-sm my-2 max-w-none rounded-lg bg-layer-2 p-4 pt-12 text-primary prose"
+          className="markdown-preview prose-sm my-2 max-w-none cursor-text rounded-lg bg-layer-2 p-4 pt-12 text-primary prose"
           contentEditable={false}
+          title="Double-click to edit"
+          onDoubleClick={enterSource}
           dangerouslySetInnerHTML={{ __html: markdownHtml }}
         />
       ) : null}

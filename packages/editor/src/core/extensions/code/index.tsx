@@ -22,7 +22,9 @@ export const CustomCodeBlockExtension = CodeBlockLowlight.extend({
       stopEvent: ({ event }) => {
         const target = event.target as HTMLElement | null;
         if (!target?.closest) return false;
-        return Boolean(target.closest("select, option, button, input, a, label, .code-block-chrome"));
+        return Boolean(
+          target.closest("button, input, a, label, .code-block-chrome, .markdown-preview, [data-prevent-outside-click]")
+        );
       },
     });
   },
