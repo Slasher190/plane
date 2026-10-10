@@ -25,6 +25,8 @@ import {
   CustomQuoteExtension,
   CustomTextAlignExtension,
   CustomTypographyExtension,
+  EquationExtension,
+  HtmlArtifactExtension,
   ImageExtension,
   ListKeymap,
   Table,
@@ -105,6 +107,8 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
     }),
     CustomCodeBlockExtension,
     CustomCodeInlineExtension,
+    EquationExtension,
+    HtmlArtifactExtension,
     Markdown.configure({
       html: true,
       transformCopiedText: false,

@@ -4,33 +4,113 @@
  * See the LICENSE file for details.
  */
 
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
-import { NodeViewWrapper, NodeViewContent } from "@tiptap/react";
+import { NodeViewWrapper, NodeViewContent, type NodeViewProps } from "@tiptap/react";
+import bash from "highlight.js/lib/languages/bash";
+import css from "highlight.js/lib/languages/css";
+import go from "highlight.js/lib/languages/go";
+import java from "highlight.js/lib/languages/java";
+import javascript from "highlight.js/lib/languages/javascript";
+import json from "highlight.js/lib/languages/json";
+import markdown from "highlight.js/lib/languages/markdown";
+import python from "highlight.js/lib/languages/python";
+import sql from "highlight.js/lib/languages/sql";
 import ts from "highlight.js/lib/languages/typescript";
+import xml from "highlight.js/lib/languages/xml";
+import yaml from "highlight.js/lib/languages/yaml";
 import { common, createLowlight } from "lowlight";
 import { CheckIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CopyIcon } from "@plane/propel/icons";
-// ui
 import { Tooltip } from "@plane/propel/tooltip";
-// plane utils
 import { cn } from "@plane/utils";
-// types
 import type { TCodeBlockAttributes } from "./types";
 import { ECodeBlockAttributeNames } from "./types";
 
-// we just have ts support for now
 const lowlight = createLowlight(common);
 lowlight.register("ts", ts);
+lowlight.register("typescript", ts);
+lowlight.register("js", javascript);
+lowlight.register("javascript", javascript);
+lowlight.register("python", python);
+lowlight.register("py", python);
+lowlight.register("go", go);
+lowlight.register("java", java);
+lowlight.register("sql", sql);
+lowlight.register("bash", bash);
+lowlight.register("shell", bash);
+lowlight.register("json", json);
+lowlight.register("yaml", yaml);
+lowlight.register("yml", yaml);
+lowlight.register("markdown", markdown);
+lowlight.register("md", markdown);
+lowlight.register("css", css);
+lowlight.register("html", xml);
+lowlight.register("xml", xml);
 
-type Props = {
-  node: ProseMirrorNode;
-};
+const LANGUAGE_OPTIONS = [
+  "plaintext",
+  "typescript",
+  "javascript",
+  "python",
+  "go",
+  "java",
+  "sql",
+  "bash",
+  "json",
+  "yaml",
+  "markdown",
+  "css",
+  "html",
+  "xml",
+  "mermaid",
+];
 
-export function CodeBlockComponent({ node }: Props) {
+export function CodeBlockComponent({ node, updateAttributes }: NodeViewProps) {
   const [copied, setCopied] = useState(false);
-  // derived values
+  const [showPreview, setShowPreview] = useState(true);
+  const [mermaidSvg, setMermaidSvg] = useState<string>("");
+  const [mermaidError, setMermaidError] = useState<string>("");
   const attrs = node.attrs as TCodeBlockAttributes;
+  const language = (attrs.language || "plaintext") as string;
+  const isMermaid = language === "mermaid";
+  const source = node.textContent;
+
+  useEffect(() => {
+    if (!isMermaid || !showPreview) {
+      setMermaidSvg("");
+      setMermaidError("");
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const mermaid = (await import("mermaid")).default;
+          mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "neutral" });
+          const id = `mermaid-${Math.random().toString(36).slice(2)}`;
+          const { svg } = await mermaid.render(id, source || "graph TD;A[Start];");
+          if (!cancelled) {
+            setMermaidSvg(svg);
+            setMermaidError("");
+          }
+        } catch (error) {
+          if (!cancelled) {
+            setMermaidSvg("");
+            setMermaidError(error instanceof Error ? error.message : "Failed to render Mermaid");
+          }
+        }
+      })();
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [isMermaid, showPreview, source]);
+
+  const languageList = useMemo(() => {
+    if (LANGUAGE_OPTIONS.includes(language)) return LANGUAGE_OPTIONS;
+    return [language, ...LANGUAGE_OPTIONS];
+  }, [language]);
 
   const copyToClipboard = async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     try {
@@ -46,6 +126,28 @@ export function CodeBlockComponent({ node }: Props) {
 
   return (
     <NodeViewWrapper key={attrs[ECodeBlockAttributeNames.ID]} className="code-block group/code relative">
+      <div className="absolute top-2 left-2 z-10 flex items-center gap-1" contentEditable={false}>
+        <select
+          className="rounded-md border border-subtle bg-layer-1 px-2 py-1 text-xs text-primary"
+          value={language}
+          onChange={(e) => updateAttributes({ language: e.target.value })}
+        >
+          {languageList.map((lang) => (
+            <option key={lang} value={lang}>
+              {lang}
+            </option>
+          ))}
+        </select>
+        {isMermaid ? (
+          <button
+            type="button"
+            className="rounded-md border border-subtle bg-layer-1 px-2 py-1 text-xs"
+            onClick={() => setShowPreview((v) => !v)}
+          >
+            {showPreview ? "Hide preview" : "Show preview"}
+          </button>
+        ) : null}
+      </div>
       <Tooltip tooltipContent="Copy code">
         <button
           type="button"
@@ -65,7 +167,17 @@ export function CodeBlockComponent({ node }: Props) {
         </button>
       </Tooltip>
 
-      <pre className="my-2 rounded-lg bg-layer-3 p-4 text-primary">
+      {isMermaid && showPreview ? (
+        <div className="mt-2 overflow-x-auto rounded-t-lg bg-layer-2 p-4 text-primary" contentEditable={false}>
+          {mermaidError ? (
+            <pre className="whitespace-pre-wrap text-xs text-danger-primary">{mermaidError}</pre>
+          ) : (
+            <div dangerouslySetInnerHTML={{ __html: mermaidSvg }} />
+          )}
+        </div>
+      ) : null}
+
+      <pre className={cn("my-2 rounded-lg bg-layer-3 p-4 pt-10 text-primary", isMermaid && showPreview && "mt-0 rounded-t-none")}>
         <NodeViewContent as="code" className="whitespace-pre-wrap" />
       </pre>
     </NodeViewWrapper>

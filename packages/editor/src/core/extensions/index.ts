@@ -9,6 +9,8 @@ export * from "./code";
 export * from "./code-inline";
 export * from "./custom-link";
 export * from "./custom-list-keymap";
+export * from "./equation";
+export * from "./html-artifact";
 export * from "./image";
 export * from "./mentions";
 export * from "./slash-commands";

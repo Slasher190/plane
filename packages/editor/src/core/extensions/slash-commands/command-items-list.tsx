@@ -8,6 +8,9 @@ import {
   ALargeSmall,
   CaseSensitive,
   Code2,
+  FileCode2,
+  FunctionSquare,
+  GitBranch,
   Heading1,
   Heading2,
   Heading3,
@@ -179,6 +182,44 @@ export const getSlashCommandFilteredSections =
             searchTerms: ["codeblock"],
             icon: <Code2 className="size-3.5" />,
             command: ({ editor, range }) => editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
+          },
+          {
+            commandKey: "mermaid",
+            key: "mermaid",
+            title: "Mermaid diagram",
+            description: "Insert a Mermaid diagram code block.",
+            searchTerms: ["mermaid", "diagram", "flowchart", "sequence"],
+            icon: <GitBranch className="size-3.5" />,
+            command: ({ editor, range }) =>
+              editor.chain().focus().deleteRange(range).toggleCodeBlock({ language: "mermaid" }).run(),
+          },
+          {
+            commandKey: "equation",
+            key: "equation",
+            title: "Equation",
+            description: "Insert a LaTeX block equation.",
+            searchTerms: ["latex", "math", "equation", "katex", "formula"],
+            icon: <FunctionSquare className="size-3.5" />,
+            command: ({ editor, range }) =>
+              editor
+                .chain()
+                .focus()
+                .deleteRange(range)
+                .insertContent({
+                  type: "equation",
+                  attrs: { latex: "a^2 + b^2 = c^2", display: true },
+                })
+                .run(),
+          },
+          {
+            commandKey: "html-artifact",
+            key: "html-artifact",
+            title: "HTML artifact",
+            description: "Embed a sandboxed HTML file.",
+            searchTerms: ["html", "artifact", "iframe", "embed"],
+            icon: <FileCode2 className="size-3.5" />,
+            command: ({ editor, range }) =>
+              editor.chain().focus().deleteRange(range).insertContent({ type: "htmlArtifact" }).run(),
           },
           {
             commandKey: "callout",
