@@ -26,6 +26,13 @@ export const CustomCodeBlockExtension = CodeBlockLowlight.extend({
           target.closest("button, input, a, label, .code-block-chrome, .markdown-preview, [data-prevent-outside-click]")
         );
       },
+      // Preview markup and the language menu sit outside the code content.
+      // Reading those DOM changes back into the document was splitting the block.
+      ignoreMutation: ({ mutation }) => {
+        if (mutation.type === "attributes") return true;
+        const node = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
+        return Boolean(node?.closest(".markdown-preview, .code-block-chrome, [data-prevent-outside-click]"));
+      },
     });
   },
 

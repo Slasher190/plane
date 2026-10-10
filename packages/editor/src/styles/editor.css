@@ -507,6 +507,21 @@ span[data-name][data-type="emoji"] img {
   -webkit-user-select: none;
 }
 
+/* Keep every line in the DOM while the preview is shown.
+   A 1px clip makes ProseMirror keep only the first line. */
+.code-block-source-hidden {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  margin: 0;
+  overflow: visible;
+  white-space: pre-wrap;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
 /* Rendered markdown blocks (Notion-like). ProseMirror forces pre-wrap, so reset it here. */
 .markdown-preview,
 .markdown-preview * {

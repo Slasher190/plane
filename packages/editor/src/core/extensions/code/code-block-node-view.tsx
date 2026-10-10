@@ -81,7 +81,7 @@ function stopEditorEvent(event: React.SyntheticEvent) {
   event.stopPropagation();
 }
 
-export function CodeBlockComponent({ node, updateAttributes, editor, getPos }: NodeViewProps) {
+export function CodeBlockComponent({ node, updateAttributes, editor }: NodeViewProps) {
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [mermaidSvg, setMermaidSvg] = useState<string>("");
@@ -151,16 +151,6 @@ export function CodeBlockComponent({ node, updateAttributes, editor, getPos }: N
     event.preventDefault();
     event.stopPropagation();
     setShowPreview(false);
-    const pos = getPos();
-    if (typeof pos === "number") {
-      window.requestAnimationFrame(() => {
-        editor
-          .chain()
-          .focus()
-          .setTextSelection(pos + 1)
-          .run();
-      });
-    }
   };
 
   const languageList = useMemo(() => {
@@ -250,7 +240,7 @@ export function CodeBlockComponent({ node, updateAttributes, editor, getPos }: N
       <pre
         className={cn(
           "my-2 rounded-lg bg-layer-3 p-4 pt-10 text-primary",
-          (isMermaid || isMarkdown) && showPreview && "sr-only"
+          (isMermaid || isMarkdown) && showPreview && "code-block-source-hidden"
         )}
       >
         <NodeViewContent as="code" className="whitespace-pre-wrap" />
