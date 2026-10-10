@@ -26,7 +26,8 @@ const InstanceAIPage = observer(function InstanceAIPage(_props: Route.ComponentP
     <PageWrapper
       header={{
         title: "AI features for all your workspaces",
-        description: "Choose a cloud provider, model, API key, and base URL. These apply to every workspace.",
+        description:
+          "Choose a provider, type the model, then save the API key and base URL. These apply to every workspace.",
       }}
     >
       {formattedConfig ? (

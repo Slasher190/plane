@@ -20,14 +20,13 @@ type IInstanceAIForm = {
 
 type AIFormValues = Record<TInstanceAIConfigurationKeys, string>;
 
-type ProviderId = "openrouter" | "bedrock" | "azure" | "litellm";
+type ProviderId = "openrouter" | "bedrock" | "azure" | "litellm" | "ollama";
 
 const PROVIDERS: {
   id: ProviderId;
   label: string;
   description: string;
   baseUrl: string;
-  models: string[];
   keyHelp: string;
 }[] = [
   {
@@ -35,7 +34,6 @@ const PROVIDERS: {
     label: "OpenRouter",
     description: "One API key for many cloud models.",
     baseUrl: "https://openrouter.ai/api/v1",
-    models: ["openai/gpt-4o-mini", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "google/gemini-2.0-flash-001"],
     keyHelp: "OpenRouter API key from openrouter.ai/keys",
   },
   {
@@ -43,11 +41,6 @@ const PROVIDERS: {
     label: "AWS Bedrock",
     description: "Routed through LiteLLM. AWS keys stay in server env.",
     baseUrl: "http://litellm:4000/v1",
-    models: [
-      "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
-      "bedrock/amazon.nova-lite-v1:0",
-      "bedrock/amazon.nova-pro-v1:0",
-    ],
     keyHelp: "LiteLLM master key (same value as LITELLM_MASTER_KEY)",
   },
   {
@@ -55,21 +48,21 @@ const PROVIDERS: {
     label: "Azure OpenAI",
     description: "Your Azure endpoint, deployment, and key.",
     baseUrl: "",
-    models: ["azure/gpt-4o-mini", "azure/gpt-4o"],
     keyHelp: "Azure API key, or the LiteLLM master key if routing through the gateway",
   },
   {
     id: "litellm",
     label: "LiteLLM gateway",
-    description: "Use the on-host gateway and pick any configured model.",
+    description: "Use the on-host gateway and type any configured model.",
     baseUrl: "http://litellm:4000/v1",
-    models: [
-      "openrouter/openai/gpt-4o-mini",
-      "openrouter/anthropic/claude-3.5-sonnet",
-      "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
-      "azure/gpt-4o-mini",
-    ],
     keyHelp: "LiteLLM master key",
+  },
+  {
+    id: "ollama",
+    label: "Ollama",
+    description: "Local server. Type the model name yourself.",
+    baseUrl: "http://host.docker.internal:11434/v1",
+    keyHelp: "Ollama does not check this. Any value works, such as ollama.",
   },
 ];
 
@@ -97,16 +90,11 @@ export function InstanceAIForm(props: IInstanceAIForm) {
 
   const providerId = (watch("LLM_PROVIDER") || "openrouter") as ProviderId;
   const provider = providerFor(providerId);
-  const model = watch("LLM_MODEL") || "";
-  const modelChoices = provider.models.includes(model) ? provider.models : [model, ...provider.models].filter(Boolean);
 
   const onProviderChange = (nextId: string) => {
     const next = providerFor(nextId);
     setValue("LLM_PROVIDER", next.id);
-    setValue("LLM_BASE_URL", next.baseUrl);
-    if (!next.models.includes(watch("LLM_MODEL"))) {
-      setValue("LLM_MODEL", next.models[0] ?? "");
-    }
+    if (next.baseUrl) setValue("LLM_BASE_URL", next.baseUrl);
   };
 
   const onSubmit = async (formData: AIFormValues) => {
@@ -127,7 +115,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
         <div>
           <div className="pb-1 text-18 font-medium text-primary">Cloud provider</div>
           <div className="text-13 font-regular text-tertiary">
-            OpenRouter, AWS Bedrock, and Azure OpenAI. Plane calls the base URL with the API key and model below.
+            OpenRouter, AWS Bedrock, Azure OpenAI, LiteLLM, or Ollama. Type the model name yourself.
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -153,25 +141,19 @@ export function InstanceAIForm(props: IInstanceAIForm) {
           <Controller
             control={control}
             name="LLM_MODEL"
-            render={({ field: { value, onChange } }) => (
-              <select
-                className="h-9 w-full rounded-md border border-subtle bg-layer-1 px-3 text-13 text-primary"
+            rules={{ required: "Model is required." }}
+            render={({ field: { value, onChange, ref } }) => (
+              <Input
+                id="LLM_MODEL"
+                name="LLM_MODEL"
+                type="text"
                 value={value}
-                onChange={(event) => onChange(event.target.value)}
-              >
-                {modelChoices.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
+                onChange={onChange}
+                ref={ref}
+                placeholder="llama3.2, openai/gpt-4o-mini, ..."
+                className="w-full rounded-md font-medium"
+              />
             )}
-          />
-          <Input
-            className="mt-2 w-full rounded-md font-medium"
-            placeholder="Or type a model id your key can call"
-            value={model}
-            onChange={(event) => setValue("LLM_MODEL", event.target.value)}
           />
           {errors.LLM_MODEL ? <span className="text-11 text-danger-primary">Model is required.</span> : null}
         </div>
@@ -206,8 +188,8 @@ export function InstanceAIForm(props: IInstanceAIForm) {
             )}
           />
           <p className="text-11 text-tertiary">
-            OpenRouter: https://openrouter.ai/api/v1. Gateway on this server: http://litellm:4000/v1. Azure: your
-            resource endpoint.
+            OpenRouter: https://openrouter.ai/api/v1. Gateway: http://litellm:4000/v1. Ollama:
+            http://host.docker.internal:11434/v1. Azure: your resource endpoint.
           </p>
         </div>
       </div>

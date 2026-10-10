@@ -77,6 +77,14 @@ class LiteLLMProvider(LLMProvider):
     default_model = "openrouter/openai/gpt-4o-mini"
 
 
+class OllamaProvider(LLMProvider):
+    """Local Ollama server. The model name is whatever the admin types."""
+
+    name = "Ollama"
+    models: List[str] = []
+    default_model = ""
+
+
 SUPPORTED_PROVIDERS = {
     "openai": OpenAIProvider,
     "anthropic": AnthropicProvider,
@@ -85,6 +93,7 @@ SUPPORTED_PROVIDERS = {
     "openrouter": LiteLLMProvider,
     "bedrock": LiteLLMProvider,
     "azure": LiteLLMProvider,
+    "ollama": OllamaProvider,
 }
 
 
@@ -136,8 +145,11 @@ def get_llm_config() -> Tuple[str | None, str | None, str | None, str | None]:
         )
         return None, None, None, None
 
-    if not base_url and (provider_key or "").lower() in ("litellm", "openrouter", "bedrock", "azure"):
+    provider_name = (provider_key or "").lower()
+    if not base_url and provider_name in ("litellm", "openrouter", "bedrock", "azure"):
         base_url = os.environ.get("LLM_BASE_URL", "http://litellm:4000/v1")
+    if not base_url and provider_name == "ollama":
+        base_url = os.environ.get("OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1")
 
     return api_key, model, provider_key, base_url
 
