@@ -5,22 +5,23 @@
  */
 
 import { mergeAttributes, Node, nodeInputRule } from "@tiptap/core";
-import { ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react";
+import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import katex from "katex";
 import { useMemo } from "react";
 import "katex/dist/katex.min.css";
 
 type EquationAttrs = { latex: string; display: boolean };
 
-function EquationView({ node }: { node: { attrs: EquationAttrs } }) {
-  const { latex, display } = node.attrs;
+function EquationView({ node }: NodeViewProps) {
+  const latex = String(node.attrs.latex ?? "");
+  const display = Boolean(node.attrs.display);
   const html = useMemo(() => {
     try {
       return katex.renderToString(latex || "", {
         throwOnError: false,
         displayMode: display,
       });
-    } catch (error) {
+    } catch {
       return `<span class="text-danger-primary">Invalid LaTeX</span>`;
     }
   }, [latex, display]);
@@ -76,11 +77,11 @@ export const EquationExtension = Node.create({
   addCommands() {
     return {
       setEquation:
-        (attrs: Partial<EquationAttrs>) =>
+        (attrs?: Partial<EquationAttrs>) =>
         ({ commands }) =>
           commands.insertContent({
             type: this.name,
-            attrs: { latex: attrs.latex ?? "", display: attrs.display ?? false },
+            attrs: { latex: attrs?.latex ?? "", display: attrs?.display ?? false },
           }),
     };
   },

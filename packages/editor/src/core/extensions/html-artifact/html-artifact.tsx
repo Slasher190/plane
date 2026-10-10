@@ -5,7 +5,7 @@
  */
 
 import { mergeAttributes, Node } from "@tiptap/core";
-import { ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react";
+import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { useRef } from "react";
 
 type HtmlArtifactAttrs = {
@@ -14,16 +14,10 @@ type HtmlArtifactAttrs = {
   height: number;
 };
 
-function HtmlArtifactView({
-  node,
-  updateAttributes,
-  deleteNode,
-}: {
-  node: { attrs: HtmlArtifactAttrs };
-  updateAttributes: (attrs: Partial<HtmlArtifactAttrs>) => void;
-  deleteNode: () => void;
-}) {
-  const { src, title, height } = node.attrs;
+function HtmlArtifactView({ node, updateAttributes, deleteNode }: NodeViewProps) {
+  const src = String(node.attrs.src ?? "");
+  const title = String(node.attrs.title ?? "HTML artifact");
+  const height = Number(node.attrs.height ?? 360);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const onFile = async (file: File | null) => {
