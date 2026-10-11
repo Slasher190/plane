@@ -59,6 +59,15 @@ function renderMarkdown(source: string) {
     .replace(/javascript:/gi, "");
 }
 
+/** marked escapes arrows as entities; decode if they leaked into code-block text. */
+function decodeMermaidSource(source: string) {
+  return source
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"');
+}
+
 const LANGUAGE_OPTIONS = [
   "plaintext",
   "typescript",
@@ -95,6 +104,9 @@ export function CodeBlockComponent({ node, updateAttributes, editor }: NodeViewP
     () => (isMarkdown && showPreview ? renderMarkdown(source) : ""),
     [isMarkdown, showPreview, source]
   );
+  // Keep source visible until a preview (or error) exists — otherwise the block looks empty.
+  const mermaidPreviewReady = Boolean(mermaidSvg || mermaidError);
+  const hideSource = showPreview && ((isMarkdown && Boolean(markdownHtml)) || (isMermaid && mermaidPreviewReady));
 
   useEffect(() => {
     if (!isMermaid || !showPreview) {
@@ -109,7 +121,8 @@ export function CodeBlockComponent({ node, updateAttributes, editor }: NodeViewP
           const mermaid = (await import("mermaid")).default;
           mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "neutral" });
           const id = `mermaid-${Math.random().toString(36).slice(2)}`;
-          const { svg } = await mermaid.render(id, source || "graph TD;A[Start];");
+          const diagram = decodeMermaidSource(source).trim() || "graph TD;A[Start];";
+          const { svg } = await mermaid.render(id, diagram);
           if (!cancelled) {
             setMermaidSvg(svg);
             setMermaidError("");
@@ -215,14 +228,21 @@ export function CodeBlockComponent({ node, updateAttributes, editor }: NodeViewP
 
       {isMermaid && showPreview ? (
         <div
-          className="mt-2 overflow-x-auto rounded-t-lg bg-layer-2 p-4 text-primary"
+          role="group"
+          aria-label="Mermaid diagram preview"
+          className="mermaid-preview mt-2 overflow-x-auto rounded-t-lg bg-layer-2 p-4 text-primary"
           contentEditable={false}
+          data-prevent-outside-click
           onDoubleClick={enterSource}
+          onMouseDown={stopEditorEvent}
+          onPointerDown={stopEditorEvent}
         >
           {mermaidError ? (
             <pre className="text-xs whitespace-pre-wrap text-danger-primary">{mermaidError}</pre>
+          ) : mermaidSvg ? (
+            <div data-prevent-outside-click dangerouslySetInnerHTML={{ __html: mermaidSvg }} />
           ) : (
-            <div dangerouslySetInnerHTML={{ __html: mermaidSvg }} />
+            <p className="text-xs text-tertiary">Rendering diagram…</p>
           )}
         </div>
       ) : null}
@@ -238,10 +258,7 @@ export function CodeBlockComponent({ node, updateAttributes, editor }: NodeViewP
       ) : null}
 
       <pre
-        className={cn(
-          "my-2 rounded-lg bg-layer-3 p-4 pt-10 text-primary",
-          (isMermaid || isMarkdown) && showPreview && "code-block-source-hidden"
-        )}
+        className={cn("my-2 rounded-lg bg-layer-3 p-4 pt-10 text-primary", hideSource && "code-block-source-hidden")}
       >
         <NodeViewContent as="code" className="whitespace-pre-wrap" />
       </pre>

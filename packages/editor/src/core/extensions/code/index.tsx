@@ -23,15 +23,19 @@ export const CustomCodeBlockExtension = CodeBlockLowlight.extend({
         const target = event.target as HTMLElement | null;
         if (!target?.closest) return false;
         return Boolean(
-          target.closest("button, input, a, label, .code-block-chrome, .markdown-preview, [data-prevent-outside-click]")
+          target.closest(
+            "button, input, a, label, .code-block-chrome, .markdown-preview, .mermaid-preview, [data-prevent-outside-click]"
+          )
         );
       },
       // Preview markup and the language menu sit outside the code content.
-      // Reading those DOM changes back into the document was splitting the block.
+      // Reading those DOM changes back into the document was wiping Mermaid/code text.
       ignoreMutation: ({ mutation }) => {
         if (mutation.type === "attributes") return true;
         const node = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
-        return Boolean(node?.closest(".markdown-preview, .code-block-chrome, [data-prevent-outside-click]"));
+        return Boolean(
+          node?.closest(".markdown-preview, .mermaid-preview, .code-block-chrome, [data-prevent-outside-click]")
+        );
       },
     });
   },
