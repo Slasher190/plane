@@ -6,6 +6,7 @@
 
 import { Selection } from "@tiptap/pm/state";
 import { ReactNodeViewRenderer } from "@tiptap/react";
+import latex from "highlight.js/lib/languages/latex";
 import ts from "highlight.js/lib/languages/typescript";
 import { common, createLowlight } from "lowlight";
 // components
@@ -14,6 +15,8 @@ import { CodeBlockComponent } from "./code-block-node-view";
 
 const lowlight = createLowlight(common);
 lowlight.register("ts", ts);
+lowlight.register("latex", latex);
+lowlight.register("tex", latex);
 
 export const CustomCodeBlockExtension = CodeBlockLowlight.extend({
   addNodeView() {
@@ -24,7 +27,7 @@ export const CustomCodeBlockExtension = CodeBlockLowlight.extend({
         if (!target?.closest) return false;
         return Boolean(
           target.closest(
-            "button, input, a, label, .code-block-chrome, .markdown-preview, .mermaid-preview, [data-prevent-outside-click]"
+            "button, input, a, label, .code-block-chrome, .markdown-preview, .mermaid-preview, .latex-preview, [data-prevent-outside-click]"
           )
         );
       },
@@ -34,7 +37,9 @@ export const CustomCodeBlockExtension = CodeBlockLowlight.extend({
         if (mutation.type === "attributes") return true;
         const node = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
         return Boolean(
-          node?.closest(".markdown-preview, .mermaid-preview, .code-block-chrome, [data-prevent-outside-click]")
+          node?.closest(
+            ".markdown-preview, .mermaid-preview, .latex-preview, .code-block-chrome, [data-prevent-outside-click]"
+          )
         );
       },
     });

@@ -11,6 +11,7 @@ import go from "highlight.js/lib/languages/go";
 import java from "highlight.js/lib/languages/java";
 import javascript from "highlight.js/lib/languages/javascript";
 import json from "highlight.js/lib/languages/json";
+import latex from "highlight.js/lib/languages/latex";
 import markdown from "highlight.js/lib/languages/markdown";
 import python from "highlight.js/lib/languages/python";
 import sql from "highlight.js/lib/languages/sql";
@@ -19,6 +20,7 @@ import xml from "highlight.js/lib/languages/xml";
 import yaml from "highlight.js/lib/languages/yaml";
 import { common, createLowlight } from "lowlight";
 import { CheckIcon } from "lucide-react";
+import { renderToString as renderKatex } from "katex";
 import { marked } from "marked";
 import { useEffect, useMemo, useState } from "react";
 import { CopyIcon } from "@plane/propel/icons";
@@ -48,6 +50,8 @@ lowlight.register("md", markdown);
 lowlight.register("css", css);
 lowlight.register("html", xml);
 lowlight.register("xml", xml);
+lowlight.register("latex", latex);
+lowlight.register("tex", latex);
 
 marked.setOptions({ gfm: true, breaks: true });
 
@@ -84,10 +88,41 @@ const LANGUAGE_OPTIONS = [
   "html",
   "xml",
   "mermaid",
+  "latex",
+  "tex",
 ];
 
 function stopEditorEvent(event: React.SyntheticEvent) {
   event.stopPropagation();
+}
+
+function isFullLatexDocument(source: string) {
+  return /\\documentclass\b/.test(source);
+}
+
+function renderLatexPreview(source: string): { html: string; error: string; isDocument: boolean } {
+  const trimmed = source.trim();
+  if (!trimmed) return { html: "", error: "", isDocument: false };
+  if (isFullLatexDocument(trimmed)) {
+    return {
+      html: "",
+      error: "",
+      isDocument: true,
+    };
+  }
+  try {
+    return {
+      html: renderKatex(trimmed, { throwOnError: false, displayMode: true }),
+      error: "",
+      isDocument: false,
+    };
+  } catch (error) {
+    return {
+      html: "",
+      error: error instanceof Error ? error.message : "Failed to render LaTeX",
+      isDocument: false,
+    };
+  }
 }
 
 export function CodeBlockComponent({ node, updateAttributes, editor }: NodeViewProps) {
@@ -99,14 +134,24 @@ export function CodeBlockComponent({ node, updateAttributes, editor }: NodeViewP
   const language = (attrs.language || "plaintext") as string;
   const isMermaid = language === "mermaid";
   const isMarkdown = language === "markdown" || language === "md";
+  const isLatex = language === "latex" || language === "tex";
   const source = node.textContent;
   const markdownHtml = useMemo(
     () => (isMarkdown && showPreview ? renderMarkdown(source) : ""),
     [isMarkdown, showPreview, source]
   );
+  const latexPreview = useMemo(
+    () => (isLatex && showPreview ? renderLatexPreview(source) : { html: "", error: "", isDocument: false }),
+    [isLatex, showPreview, source]
+  );
   // Keep source visible until a preview (or error) exists — otherwise the block looks empty.
   const mermaidPreviewReady = Boolean(mermaidSvg || mermaidError);
-  const hideSource = showPreview && ((isMarkdown && Boolean(markdownHtml)) || (isMermaid && mermaidPreviewReady));
+  const latexPreviewReady = Boolean(latexPreview.html || latexPreview.error || latexPreview.isDocument);
+  const hideSource =
+    showPreview &&
+    ((isMarkdown && Boolean(markdownHtml)) ||
+      (isMermaid && mermaidPreviewReady) ||
+      (isLatex && latexPreviewReady && !latexPreview.isDocument));
 
   useEffect(() => {
     if (!isMermaid || !showPreview) {
@@ -142,7 +187,7 @@ export function CodeBlockComponent({ node, updateAttributes, editor }: NodeViewP
   }, [isMermaid, showPreview, source]);
 
   useEffect(() => {
-    if (showPreview || (!isMarkdown && !isMermaid)) return;
+    if (showPreview || (!isMarkdown && !isMermaid && !isLatex)) return;
     const onSelection = () => {
       const { $from } = editor.state.selection;
       let inside = false;
@@ -158,7 +203,7 @@ export function CodeBlockComponent({ node, updateAttributes, editor }: NodeViewP
     return () => {
       editor.off("selectionUpdate", onSelection);
     };
-  }, [editor, isMarkdown, isMermaid, node.type.name, showPreview]);
+  }, [editor, isMarkdown, isMermaid, isLatex, node.type.name, showPreview]);
 
   const enterSource = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -255,6 +300,37 @@ export function CodeBlockComponent({ node, updateAttributes, editor }: NodeViewP
           onDoubleClick={enterSource}
           dangerouslySetInnerHTML={{ __html: markdownHtml }}
         />
+      ) : null}
+
+      {isLatex && showPreview ? (
+        <div
+          role="group"
+          aria-label="LaTeX preview"
+          className="latex-preview markdown-preview mt-2 overflow-x-auto rounded-t-lg bg-layer-2 p-4 pt-12 text-primary"
+          contentEditable={false}
+          data-prevent-outside-click
+          title="Double-click to edit source"
+          onDoubleClick={enterSource}
+          onMouseDown={stopEditorEvent}
+          onPointerDown={stopEditorEvent}
+        >
+          {latexPreview.isDocument ? (
+            <p className="text-xs text-tertiary">
+              Full LaTeX documents stay as source (need pdflatex). For rendered math, put formulas in a latex block
+              without \documentclass, or use $...$ / $$...$$ in the page.
+            </p>
+          ) : latexPreview.error ? (
+            <pre className="text-xs whitespace-pre-wrap text-danger-primary">{latexPreview.error}</pre>
+          ) : latexPreview.html ? (
+            <div
+              className="overflow-x-auto text-center"
+              data-prevent-outside-click
+              dangerouslySetInnerHTML={{ __html: latexPreview.html }}
+            />
+          ) : (
+            <p className="text-xs text-tertiary">Empty LaTeX block</p>
+          )}
+        </div>
       ) : null}
 
       <pre
