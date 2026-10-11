@@ -3,7 +3,9 @@
 # See the LICENSE file for details.
 
 # Python import
+import html
 import os
+import re
 from typing import List, Dict, Tuple
 
 # Third party import
@@ -184,6 +186,35 @@ def get_llm_response(
         else:
             return None, f"Error occurred while generating response from {provider}"
 
+_FENCED_CODE_RE = re.compile(r"```([\w+-]*)\r?\n([\s\S]*?)```", re.MULTILINE)
+
+
+def llm_text_to_response_html(text: str | None) -> str:
+    """
+    Convert LLM markdown-ish text to HTML without destroying fenced code blocks.
+    Naive ``text.replace("\\n", "<br/>")`` injects literal <br/> into Mermaid/code.
+    """
+    if not text:
+        return ""
+
+    parts: List[str] = []
+    cursor = 0
+    for match in _FENCED_CODE_RE.finditer(text):
+        prose = text[cursor : match.start()]
+        if prose:
+            parts.append(html.escape(prose).replace("\n", "<br/>"))
+        language = match.group(1) or ""
+        code = html.escape(match.group(2).rstrip("\n"))
+        lang_attr = f' class="language-{html.escape(language)}"' if language else ""
+        parts.append(f"<pre><code{lang_attr}>{code}</code></pre>")
+        cursor = match.end()
+
+    tail = text[cursor:]
+    if tail:
+        parts.append(html.escape(tail).replace("\n", "<br/>"))
+    return "".join(parts)
+
+
 class GPTIntegrationEndpoint(BaseAPIView):
     @allow_permission([ROLE.ADMIN, ROLE.MEMBER])
     def post(self, request, slug, project_id):
@@ -214,7 +245,7 @@ class GPTIntegrationEndpoint(BaseAPIView):
         return Response(
             {
                 "response": text,
-                "response_html": text.replace("\n", "<br/>"),
+                "response_html": llm_text_to_response_html(text),
                 "project_detail": ProjectLiteSerializer(project).data,
                 "workspace_detail": WorkspaceLiteSerializer(workspace).data,
             },
@@ -249,7 +280,7 @@ class WorkspaceGPTIntegrationEndpoint(BaseAPIView):
         return Response(
             {
                 "response": text,
-                "response_html": text.replace("\n", "<br/>"),
+                "response_html": llm_text_to_response_html(text),
             },
             status=status.HTTP_200_OK,
         )

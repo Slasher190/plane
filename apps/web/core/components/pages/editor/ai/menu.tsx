@@ -9,6 +9,7 @@ import type { LucideIcon } from "lucide-react";
 import { CornerDownRight, RefreshCcw, Sparkles, TriangleAlert } from "lucide-react";
 // plane editor
 import type { EditorRefApi } from "@plane/editor";
+import { convertMarkdownToHtml } from "@plane/editor";
 import { ChevronRightIcon } from "@plane/propel/icons";
 // plane ui
 import { Tooltip } from "@plane/propel/tooltip";
@@ -90,7 +91,10 @@ export function EditorAIMenu(props: Props) {
         prompt: selection || "",
         task: query.trim(),
       });
-      setResponse(res.response_html || res.response || "");
+      // Prefer raw markdown — API response_html only swaps \n for <br/> and breaks
+      // fenced code / Mermaid. Convert with marked so TipTap gets real blocks.
+      const markdown = typeof res.response === "string" ? res.response : "";
+      setResponse(markdown ? convertMarkdownToHtml(markdown) : res.response_html || "");
     } finally {
       setIsLoading(false);
     }
