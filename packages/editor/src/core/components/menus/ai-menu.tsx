@@ -34,7 +34,7 @@ export function AIFeaturesMenu(props: Props) {
     popup.current = tippy(document.body, {
       getReferenceClientRect: null,
       content: menuRef.current,
-      appendTo: () => document.querySelector(".frame-renderer"),
+      appendTo: () => document.querySelector(".frame-renderer") ?? document.body,
       trigger: "manual",
       interactive: true,
       arrow: false,
@@ -58,12 +58,13 @@ export function AIFeaturesMenu(props: Props) {
   useEffect(() => {
     const handleClickAIHandle = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (target.matches("#ai-handle") || menuRef.current?.contains(e.target as Node)) {
+      const aiHandle = target.closest("#ai-handle");
+      if (aiHandle || menuRef.current?.contains(target)) {
         e.preventDefault();
 
-        if (!isPopupVisible) {
+        if (!isPopupVisible && aiHandle) {
           popup.current?.setProps({
-            getReferenceClientRect: () => target.getBoundingClientRect(),
+            getReferenceClientRect: () => aiHandle.getBoundingClientRect(),
           });
           popup.current?.show();
           setIsPopupVisible(true);
@@ -72,7 +73,6 @@ export function AIFeaturesMenu(props: Props) {
       }
 
       hidePopup();
-      return;
     };
 
     document.addEventListener("click", handleClickAIHandle);

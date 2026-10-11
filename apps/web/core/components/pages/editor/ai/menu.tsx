@@ -69,7 +69,9 @@ export function EditorAIMenu(props: Props) {
   // states
   const [activeTask, setActiveTask] = useState<AI_EDITOR_TASKS | null>(null);
   const [response, setResponse] = useState<string | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [lastAskQuery, setLastAskQuery] = useState<string | null>(null);
   // refs
   const responseContainerRef = useRef<HTMLDivElement>(null);
   // params
@@ -77,12 +79,35 @@ export function EditorAIMenu(props: Props) {
     if (!workspaceSlug) return;
     await aiService.performEditorTask(workspaceSlug.toString(), payload).then((res) => setResponse(res.response));
   };
+  const handleAsk = async (query: string) => {
+    if (!workspaceSlug || !query.trim()) return;
+    const selection = editorRef?.getSelectedText() ?? "";
+    setLastAskQuery(query.trim());
+    setResponse(undefined);
+    setIsLoading(true);
+    try {
+      const res = await aiService.createGptTask(workspaceSlug.toString(), {
+        prompt: selection || "",
+        task: query.trim(),
+      });
+      setResponse(res.response_html || res.response || "");
+    } finally {
+      setIsLoading(false);
+    }
+  };
   // handle task click
   const handleClick = async (key: AI_EDITOR_TASKS) => {
+    if (activeTask === key) return;
+    if (key === AI_EDITOR_TASKS.ASK_ANYTHING) {
+      setActiveTask(key);
+      setResponse(undefined);
+      setIsLoading(false);
+      setIsRegenerating(false);
+      return;
+    }
     const selection = editorRef?.getSelectedText();
-    if (!selection || activeTask === key) return;
+    if (!selection) return;
     setActiveTask(key);
-    if (key === AI_EDITOR_TASKS.ASK_ANYTHING) return;
     setResponse(undefined);
     setIsRegenerating(false);
     await handleGenerateResponse({
@@ -92,8 +117,23 @@ export function EditorAIMenu(props: Props) {
   };
   // handle re-generate response
   const handleRegenerate = async () => {
+    if (!activeTask) return;
+    if (activeTask === AI_EDITOR_TASKS.ASK_ANYTHING) {
+      if (!lastAskQuery) return;
+      setIsRegenerating(true);
+      try {
+        await handleAsk(lastAskQuery);
+      } finally {
+        setIsRegenerating(false);
+        responseContainerRef.current?.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
+      return;
+    }
     const selection = editorRef?.getSelectedText();
-    if (!selection || !activeTask) return;
+    if (!selection) return;
     setIsRegenerating(true);
     await handleGenerateResponse({
       task: activeTask,
@@ -138,6 +178,9 @@ export function EditorAIMenu(props: Props) {
     if (!isOpen) {
       setActiveTask(null);
       setResponse(undefined);
+      setIsLoading(false);
+      setIsRegenerating(false);
+      setLastAskQuery(null);
     }
   }, [isOpen]);
 
@@ -196,8 +239,10 @@ export function EditorAIMenu(props: Props) {
         >
           {activeTask === AI_EDITOR_TASKS.ASK_ANYTHING ? (
             <AskPiMenu
+              handleAsk={handleAsk}
               handleInsertText={handleInsertText}
               handleRegenerate={handleRegenerate}
+              isLoading={isLoading}
               isRegenerating={isRegenerating}
               response={response}
               workspaceSlug={workspaceSlug}

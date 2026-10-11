@@ -11,26 +11,35 @@ import { Tooltip } from "@plane/propel/tooltip";
 // components
 import { cn } from "@plane/utils";
 import { RichTextEditor } from "@/components/editor/rich-text";
-// helpers
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 
 type Props = {
   handleInsertText: (insertOnNextLine: boolean) => void;
+  handleAsk: (query: string) => Promise<void>;
   handleRegenerate: () => Promise<void>;
+  isLoading: boolean;
   isRegenerating: boolean;
   response: string | undefined;
   workspaceSlug: string;
 };
 
 export function AskPiMenu(props: Props) {
-  const { handleInsertText, handleRegenerate, isRegenerating, response, workspaceSlug } = props;
+  const { handleAsk, handleInsertText, handleRegenerate, isLoading, isRegenerating, response, workspaceSlug } = props;
   // states
   const [query, setQuery] = useState("");
   // store hooks
   const { getWorkspaceBySlug } = useWorkspace();
   // derived values
   const workspaceId = getWorkspaceBySlug(workspaceSlug)?.id ?? "";
+  const canSubmit = query.trim().length > 0 && !isLoading && !isRegenerating;
+
+  const submitQuery = async () => {
+    if (!canSubmit) return;
+    const nextQuery = query.trim();
+    setQuery("");
+    await handleAsk(nextQuery);
+  };
 
   return (
     <>
@@ -93,8 +102,10 @@ export function AskPiMenu(props: Props) {
               </Tooltip>
             </div>
           </div>
-        ) : (
+        ) : isLoading ? (
           <p className="text-13 text-secondary">AI is answering...</p>
+        ) : (
+          <p className="text-13 text-secondary">Ask AI to write or edit this block.</p>
         )}
       </div>
       <div className="px-4 py-3">
@@ -107,11 +118,28 @@ export function AskPiMenu(props: Props) {
             className="w-full border-none bg-transparent text-13 outline-none placeholder:text-placeholder"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                void submitQuery();
+              }
+            }}
             placeholder="Tell AI what to do..."
+            disabled={isLoading || isRegenerating}
           />
-          <span className="grid size-4 flex-shrink-0 place-items-center">
+          <button
+            type="button"
+            className="grid size-4 flex-shrink-0 place-items-center disabled:opacity-40"
+            disabled={!canSubmit}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              void submitQuery();
+            }}
+          >
             <CircleArrowUp className="size-4 text-secondary" />
-          </span>
+          </button>
         </div>
       </div>
     </>

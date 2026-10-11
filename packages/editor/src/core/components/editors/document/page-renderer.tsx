@@ -10,7 +10,7 @@ import type { Editor } from "@tiptap/react";
 import { cn } from "@plane/utils";
 // components
 import { DocumentContentLoader, EditorContainer, EditorContentWrapper } from "@/components/editors";
-import { BlockMenu, EditorBubbleMenu } from "@/components/menus";
+import { AIFeaturesMenu, BlockMenu, EditorBubbleMenu } from "@/components/menus";
 // types
 import type { TCollabValue } from "@/contexts";
 import type {
@@ -43,6 +43,7 @@ type Props = {
 
 export function PageRenderer(props: Props) {
   const {
+    aiHandler,
     bubbleMenuEnabled,
     disabledExtensions,
     displayConfig,
@@ -59,6 +60,7 @@ export function PageRenderer(props: Props) {
     provider,
     state,
   } = props;
+  const isAIEnabled = !disabledExtensions?.includes("ai") && !!aiHandler?.menu;
   return (
     <div
       className={cn("frame-renderer w-full flex-grow", {
@@ -112,6 +114,7 @@ export function PageRenderer(props: Props) {
                   flaggedExtensions={flaggedExtensions}
                   disabledExtensions={disabledExtensions}
                 />
+                {isAIEnabled && aiHandler?.menu && <AIFeaturesMenu menu={aiHandler.menu} />}
               </div>
             )}
           </EditorContainer>
