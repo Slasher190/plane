@@ -7,8 +7,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import tippy from "tippy.js";
 import type { Instance } from "tippy.js";
-// plane utils
-import { cn } from "@plane/utils";
 // types
 import type { TAIHandler } from "@/types";
 
@@ -39,8 +37,8 @@ export function AIFeaturesMenu(props: Props) {
       arrow: false,
       placement: "bottom-start",
       animation: "shift-away",
-      hideOnClick: true,
-      onShown: () => menuRef.current?.focus(),
+      // Outside clicks are handled below; keep the menu open while typing.
+      hideOnClick: false,
     });
 
     return () => {
@@ -55,12 +53,16 @@ export function AIFeaturesMenu(props: Props) {
   }, []);
 
   useEffect(() => {
+    const isInsideMenu = (target: Node | null) => {
+      if (!target) return false;
+      if (menuRef.current?.contains(target)) return true;
+      return !!popup.current?.popper?.contains(target);
+    };
+
     const handleClickAIHandle = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const aiHandle = target.closest("#ai-handle");
-      if (aiHandle || menuRef.current?.contains(target)) {
-        e.preventDefault();
-
+      if (aiHandle || isInsideMenu(target)) {
         if (!isPopupVisible && aiHandle) {
           popup.current?.setProps({
             getReferenceClientRect: () => aiHandle.getBoundingClientRect(),
@@ -74,23 +76,23 @@ export function AIFeaturesMenu(props: Props) {
       hidePopup();
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") hidePopup();
+    };
+
     document.addEventListener("click", handleClickAIHandle);
     document.addEventListener("contextmenu", handleClickAIHandle);
-    document.addEventListener("keydown", hidePopup);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.removeEventListener("click", handleClickAIHandle);
       document.removeEventListener("contextmenu", handleClickAIHandle);
-      document.removeEventListener("keydown", hidePopup);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [hidePopup, isPopupVisible]);
 
   return (
-    <div
-      className={cn("pointer-events-none fixed inset-0 z-10 size-full opacity-0 transition-opacity", {
-        "pointer-events-auto opacity-100": isPopupVisible,
-      })}
-    >
+    <div className="pointer-events-none fixed inset-0 z-10 size-full opacity-0">
       <div ref={menuRef} className="z-10">
         {menu?.({
           isOpen: isPopupVisible,
