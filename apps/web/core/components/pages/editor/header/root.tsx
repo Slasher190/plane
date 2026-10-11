@@ -10,27 +10,33 @@ import { SmilePlus } from "lucide-react";
 // plane imports
 import { EmojiPicker, EmojiIconPickerTypes } from "@plane/propel/emoji-icon-picker";
 import { cn } from "@plane/utils";
+// hooks
+import type { EPageStoreType } from "@/hooks/store";
 // store
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
+import { PageEditorBacklinks } from "./backlinks";
+import { PageEditorBreadcrumbs } from "./breadcrumbs";
 import { PageEditorHeaderLogoPicker } from "./logo-picker";
 
 type Props = {
   page: TPageInstance;
   projectId?: string;
+  storeType: EPageStoreType;
 };
 
 export const PageEditorHeaderRoot = observer(function PageEditorHeaderRoot(props: Props) {
-  const { page } = props;
+  const { page, storeType } = props;
   // states
   const [isLogoPickerOpen, setIsLogoPickerOpen] = useState(false);
   // derived values
-  const { isContentEditable, logo_props, name, updatePageLogo } = page;
+  const { id: pageId, isContentEditable, logo_props, name, updatePageLogo } = page;
   const isLogoSelected = !!logo_props?.in_use;
   const isTitleEmpty = !name || name.trim() === "";
 
   return (
     <>
+      {pageId && <PageEditorBreadcrumbs pageId={pageId} storeType={storeType} />}
       <div className="flex h-[48px] items-end text-left">
         {!isLogoSelected && (
           <div
@@ -72,6 +78,7 @@ export const PageEditorHeaderRoot = observer(function PageEditorHeaderRoot(props
         )}
       </div>
       <PageEditorHeaderLogoPicker className="mt-2 flex w-full flex-shrink-0" page={page} />
+      {pageId && <PageEditorBacklinks pageId={pageId} storeType={storeType} />}
     </>
   );
 });

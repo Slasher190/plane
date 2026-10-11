@@ -7,7 +7,7 @@
 import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
-import { ArchiveRestoreIcon, FileOutput, LockKeyhole, LockKeyholeOpen } from "lucide-react";
+import { ArchiveRestoreIcon, FileOutput, Link2, LockKeyhole, LockKeyholeOpen } from "lucide-react";
 // constants
 import { EPageAccess } from "@plane/constants";
 // plane editor
@@ -18,6 +18,7 @@ import { ContextMenu, CustomMenu } from "@plane/ui";
 // components
 import { cn } from "@plane/utils";
 import { DeletePageModal } from "@/components/pages/modals/delete-page-modal";
+import { LinkToPageModal } from "@/components/pages/modals/link-to-page-modal";
 // hooks
 import { usePageOperations } from "@/hooks/use-page-operations";
 // plane web hooks
@@ -39,7 +40,8 @@ export type TPageActions =
   | "delete"
   | "version-history"
   | "export"
-  | "move";
+  | "move"
+  | "link-to-page";
 
 type Props = {
   extraOptions?: (TContextMenuItem & { key: TPageActions })[];
@@ -53,7 +55,8 @@ export const PageActions = observer(function PageActions(props: Props) {
   const { extraOptions, optionsOrder, page, parentRef, storeType } = props;
   // states
   const [deletePageModal, setDeletePageModal] = useState(false);
-  const [movePageModal, setMovePageModal] = useState(false);
+  const [, setMovePageModal] = useState(false);
+  const [linkToPageModal, setLinkToPageModal] = useState(false);
   // params
   const { workspaceSlug } = useParams();
   // page flag
@@ -111,6 +114,13 @@ export const PageActions = observer(function PageActions(props: Props) {
           title: "Copy link",
           icon: LinkIcon,
           shouldRender: true,
+        },
+        {
+          key: "link-to-page",
+          action: () => setLinkToPageModal(true),
+          title: "Link to page",
+          icon: Link2,
+          shouldRender: !archived_at,
         },
         {
           key: "make-a-copy",
@@ -181,6 +191,12 @@ export const PageActions = observer(function PageActions(props: Props) {
       <DeletePageModal
         isOpen={deletePageModal}
         onClose={() => setDeletePageModal(false)}
+        page={page}
+        storeType={storeType}
+      />
+      <LinkToPageModal
+        isOpen={linkToPageModal}
+        onClose={() => setLinkToPageModal(false)}
         page={page}
         storeType={storeType}
       />

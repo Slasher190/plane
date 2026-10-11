@@ -22,13 +22,23 @@ export type TPage = {
   label_ids: string[] | undefined;
   name: string | undefined;
   owned_by: string | undefined;
+  parent: string | null | undefined;
   project_ids?: string[] | undefined;
+  sort_order: number | undefined;
   updated_at: Date | undefined;
   updated_by: string | undefined;
   workspace: string | undefined;
   logo_props: TLogoProps | undefined;
   deleted_at: Date | undefined;
 } & TPageExtended;
+
+export type TPageBacklink = {
+  id: string;
+  name: string | undefined;
+  logo_props: TLogoProps | undefined;
+  owned_by: string | undefined;
+  access: EPageAccess | undefined;
+};
 
 // page filters
 export type TPageNavigationTabs = "public" | "private" | "archived";

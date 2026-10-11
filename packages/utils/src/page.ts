@@ -48,19 +48,25 @@ export const orderPages = (
 
   if (sortByKey === "name") {
     orderedPages = sortBy(pages, [(m) => m.name?.toLowerCase()]);
-    if (sortByOrder === "desc") orderedPages = orderedPages.reverse();
+    if (sortByOrder === "desc") orderedPages = orderedPages.toReversed();
   }
   if (sortByKey === "created_at") {
     orderedPages = sortBy(pages, [(m) => m.created_at]);
-    if (sortByOrder === "desc") orderedPages = orderedPages.reverse();
+    if (sortByOrder === "desc") orderedPages = orderedPages.toReversed();
   }
   if (sortByKey === "updated_at") {
     orderedPages = sortBy(pages, [(m) => m.updated_at]);
-    if (sortByOrder === "desc") orderedPages = orderedPages.reverse();
+    if (sortByOrder === "desc") orderedPages = orderedPages.toReversed();
   }
 
   return orderedPages;
 };
+
+/**
+ * @description orders sibling pages by sort_order then created_at
+ */
+export const orderPageSiblings = (pages: TPage[]): TPage[] =>
+  sortBy(pages, [(p) => p.sort_order ?? 65535, (p) => p.created_at]);
 
 /**
  * @description filters pages based on the filters

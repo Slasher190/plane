@@ -4,6 +4,8 @@
 
 # Python imports
 import json
+import re
+import uuid
 from datetime import datetime
 from django.core.serializers.json import DjangoJSONEncoder
 
@@ -38,6 +40,7 @@ from plane.app.serializers import (
 )
 from plane.db.models import (
     Page,
+    PageLink,
     PageLog,
     UserFavorite,
     ProjectMember,
@@ -55,6 +58,11 @@ from plane.bgtasks.recent_visited_task import recent_visited_task
 from plane.bgtasks.copy_s3_object import copy_s3_objects_of_description_and_assets
 from plane.app.permissions import ProjectPagePermission
 
+PAGE_MAX_DEPTH = 10
+MENTION_COMPONENT_RE = re.compile(r"<mention-component([^>]*)>", re.IGNORECASE)
+ENTITY_NAME_PAGE_RE = re.compile(r'entity_name=["\']page["\']', re.IGNORECASE)
+ENTITY_IDENTIFIER_RE = re.compile(r'entity_identifier=["\']([^"\']+)["\']', re.IGNORECASE)
+
 
 def unarchive_archive_page_and_descendants(page_id, archived_at):
     # Your SQL query
@@ -70,6 +78,147 @@ def unarchive_archive_page_and_descendants(page_id, archived_at):
     # Execute the SQL query
     with connection.cursor() as cursor:
         cursor.execute(sql, [page_id, archived_at])
+
+
+def get_page_depth(page):
+    depth = 0
+    current = page
+    seen = set()
+    while current.parent_id:
+        if current.id in seen:
+            break
+        seen.add(current.id)
+        depth += 1
+        current = current.parent
+    return depth
+
+
+def get_subtree_height(page_id):
+    sql = """
+    WITH RECURSIVE descendants AS (
+        SELECT id, 0 AS rel_depth FROM pages WHERE id = %s
+        UNION ALL
+        SELECT pages.id, descendants.rel_depth + 1
+        FROM pages, descendants
+        WHERE pages.parent_id = descendants.id
+    )
+    SELECT COALESCE(MAX(rel_depth), 0) FROM descendants;
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(sql, [page_id])
+        row = cursor.fetchone()
+        return row[0] if row else 0
+
+
+def would_create_parent_cycle(page_id, new_parent_id):
+    if not new_parent_id:
+        return False
+    if str(page_id) == str(new_parent_id):
+        return True
+    current_id = new_parent_id
+    seen = set()
+    while current_id:
+        if str(current_id) == str(page_id):
+            return True
+        if current_id in seen:
+            break
+        seen.add(current_id)
+        parent_id = (
+            Page.objects.filter(pk=current_id).values_list("parent_id", flat=True).first()
+        )
+        current_id = parent_id
+    return False
+
+
+def validate_page_parent(page, new_parent_id, slug, project_id):
+    if new_parent_id in ("", None):
+        return None, None
+
+    try:
+        parent = Page.objects.get(
+            pk=new_parent_id,
+            workspace__slug=slug,
+            projects__id=project_id,
+            project_pages__deleted_at__isnull=True,
+        )
+    except Page.DoesNotExist:
+        return None, Response({"error": "Parent page not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if would_create_parent_cycle(page.id, parent.id):
+        return None, Response(
+            {"error": "A page cannot be nested under itself or its descendants"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    parent_depth = get_page_depth(parent)
+    subtree_height = get_subtree_height(page.id)
+    if parent_depth + 1 + subtree_height > PAGE_MAX_DEPTH:
+        return None, Response(
+            {"error": f"Page nesting cannot exceed {PAGE_MAX_DEPTH} levels"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return parent, None
+
+
+def extract_page_mention_ids(html):
+    ids = set()
+    if not html:
+        return ids
+    for match in MENTION_COMPONENT_RE.finditer(html):
+        attrs = match.group(1) or ""
+        if not ENTITY_NAME_PAGE_RE.search(attrs):
+            continue
+        identifier_match = ENTITY_IDENTIFIER_RE.search(attrs)
+        if identifier_match:
+            ids.add(identifier_match.group(1))
+    return ids
+
+
+def sync_page_links(source_page, html, project_id, _slug=None):
+    mention_ids = extract_page_mention_ids(html)
+    target_ids = set()
+    for raw_id in mention_ids:
+        try:
+            target_ids.add(uuid.UUID(str(raw_id)))
+        except (ValueError, TypeError):
+            continue
+
+    if target_ids:
+        valid_ids = set(
+            Page.objects.filter(
+                id__in=target_ids,
+                workspace_id=source_page.workspace_id,
+                projects__id=project_id,
+                project_pages__deleted_at__isnull=True,
+            )
+            .exclude(id=source_page.id)
+            .values_list("id", flat=True)
+        )
+        target_ids = valid_ids
+
+    existing_ids = set(
+        PageLink.objects.filter(source_page=source_page).values_list("target_page_id", flat=True)
+    )
+    to_add = target_ids - existing_ids
+    to_remove = existing_ids - target_ids
+
+    if to_remove:
+        PageLink.objects.filter(source_page=source_page, target_page_id__in=to_remove).delete(soft=False)
+
+    if to_add:
+        PageLink.objects.bulk_create(
+            [
+                PageLink(
+                    workspace_id=source_page.workspace_id,
+                    source_page=source_page,
+                    target_page_id=target_id,
+                )
+                for target_id in to_add
+            ],
+            batch_size=50,
+            ignore_conflicts=True,
+        )
 
 
 class PageViewSet(BaseViewSet):
@@ -94,15 +243,15 @@ class PageViewSet(BaseViewSet):
                 projects__project_projectmember__is_active=True,
                 projects__archived_at__isnull=True,
             )
-            .filter(parent__isnull=True)
             .filter(Q(owned_by=self.request.user) | Q(access=0))
             .prefetch_related("projects")
             .select_related("workspace")
             .select_related("owned_by")
+            .select_related("parent")
             .annotate(is_favorite=Exists(subquery))
             .order_by(self.request.GET.get("order_by", "-created_at"))
             .prefetch_related("labels")
-            .order_by("-is_favorite", "-created_at")
+            .order_by("-is_favorite", "sort_order", "-created_at")
             .annotate(
                 project=Exists(
                     ProjectPage.objects.filter(page_id=OuterRef("id"), project_id=self.kwargs.get("project_id"))
@@ -127,6 +276,23 @@ class PageViewSet(BaseViewSet):
         )
 
     def create(self, request, slug, project_id):
+        parent_id = request.data.get("parent", None)
+        if parent_id:
+            try:
+                parent = Page.objects.get(
+                    pk=parent_id,
+                    workspace__slug=slug,
+                    projects__id=project_id,
+                    project_pages__deleted_at__isnull=True,
+                )
+            except Page.DoesNotExist:
+                return Response({"error": "Parent page not found"}, status=status.HTTP_400_BAD_REQUEST)
+            if get_page_depth(parent) + 1 > PAGE_MAX_DEPTH:
+                return Response(
+                    {"error": f"Page nesting cannot exceed {PAGE_MAX_DEPTH} levels"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         serializer = PageSerializer(
             data=request.data,
             context={
@@ -163,14 +329,12 @@ class PageViewSet(BaseViewSet):
             if page.is_locked:
                 return Response({"error": "Page is locked"}, status=status.HTTP_400_BAD_REQUEST)
 
-            parent = request.data.get("parent", None)
-            if parent:
-                _ = Page.objects.get(
-                    pk=parent,
-                    workspace__slug=slug,
-                    projects__id=project_id,
-                    project_pages__deleted_at__isnull=True,
-                )
+            if "parent" in request.data:
+                parent_id = request.data.get("parent", None)
+                if parent_id:
+                    _, error_response = validate_page_parent(page, parent_id, slug, project_id)
+                    if error_response:
+                        return error_response
 
             # Only update access if the page owner is the requesting  user
             if page.access != request.data.get("access", page.access) and page.owned_by_id != request.user.id:
@@ -190,6 +354,7 @@ class PageViewSet(BaseViewSet):
                         old_description_html=page_description,
                         page_id=page_id,
                     )
+                    sync_page_links(page, request.data.get("description_html"), project_id, slug)
 
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -401,6 +566,8 @@ class PageViewSet(BaseViewSet):
             project_pages__deleted_at__isnull=True,
         ).update(parent=None)
 
+        PageLink.objects.filter(Q(source_page_id=page_id) | Q(target_page_id=page_id)).delete(soft=False)
+
         page.delete()
         # Delete the user favorite page
         UserFavorite.objects.filter(
@@ -418,6 +585,29 @@ class PageViewSet(BaseViewSet):
         ).delete(soft=False)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    def backlinks(self, request, slug, project_id, page_id):
+        page = Page.objects.filter(
+            pk=page_id,
+            workspace__slug=slug,
+            projects__id=project_id,
+            project_pages__deleted_at__isnull=True,
+        ).first()
+        if not page:
+            return Response({"error": "Page not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        backlink_pages = (
+            Page.objects.filter(
+                workspace__slug=slug,
+                projects__id=project_id,
+                project_pages__deleted_at__isnull=True,
+                outgoing_page_links__target_page_id=page_id,
+            )
+            .filter(Q(owned_by=request.user) | Q(access=0))
+            .distinct()
+            .values("id", "name", "logo_props", "owned_by", "access")
+        )
+        return Response(list(backlink_pages), status=status.HTTP_200_OK)
+
     def summary(self, request, slug, project_id):
         queryset = (
             Page.objects.filter(workspace__slug=slug)
@@ -426,7 +616,6 @@ class PageViewSet(BaseViewSet):
                 projects__project_projectmember__is_active=True,
                 projects__archived_at__isnull=True,
             )
-            .filter(parent__isnull=True)
             .filter(Q(owned_by=request.user) | Q(access=0))
             .annotate(
                 project=Exists(
@@ -563,6 +752,7 @@ class PagesDescriptionViewSet(BaseViewSet):
                     old_description_html=old_description_html,
                     page_id=page_id,
                 )
+                sync_page_links(page, request.data.get("description_html"), project_id, slug)
 
             # Run background tasks
             track_page_version.delay(

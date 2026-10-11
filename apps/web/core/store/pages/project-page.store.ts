@@ -9,10 +9,10 @@ import { makeObservable, observable, runInAction, action, reaction, computed } f
 import { computedFn } from "mobx-utils";
 // types
 import { EUserPermissions } from "@plane/constants";
-import type { TPage, TPageFilters, TPageNavigationTabs } from "@plane/types";
+import type { TPage, TPageBacklink, TPageFilters, TPageNavigationTabs } from "@plane/types";
 import { EUserProjectRoles } from "@plane/types";
 // helpers
-import { filterPagesByPageType, getPageName, orderPages, shouldFilterPage } from "@plane/utils";
+import { filterPagesByPageType, getPageName, orderPageSiblings, orderPages, shouldFilterPage } from "@plane/utils";
 // plane web constants
 // plane web store
 // services
@@ -46,6 +46,9 @@ export interface IProjectPageStore {
   getCurrentProjectPageIdsByTab: (pageType: TPageNavigationTabs) => string[] | undefined;
   getCurrentProjectPageIds: (projectId: string) => string[];
   getCurrentProjectFilteredPageIdsByTab: (pageType: TPageNavigationTabs) => string[] | undefined;
+  getChildPageIds: (pageId: string, pageType: TPageNavigationTabs) => string[];
+  getPageAncestorIds: (pageId: string) => string[];
+  isDescendantPage: (ancestorId: string, pageId: string) => boolean;
   getPageById: (pageId: string) => TProjectPage | undefined;
   updateFilters: <T extends keyof TPageFilters>(filterKey: T, filterValue: TPageFilters[T]) => void;
   clearAllFilters: () => void;
@@ -64,6 +67,8 @@ export interface IProjectPageStore {
   createPage: (pageData: Partial<TPage>) => Promise<TPage | undefined>;
   removePage: (params: { pageId: string; shouldSync?: boolean }) => Promise<void>;
   movePage: (workspaceSlug: string, projectId: string, pageId: string, newProjectId: string) => Promise<void>;
+  updatePageParent: (pageId: string, parentId: string | null, sortOrder?: number) => Promise<void>;
+  fetchBacklinks: (pageId: string) => Promise<TPageBacklink[]>;
 }
 
 export class ProjectPageStore implements IProjectPageStore {
@@ -99,6 +104,8 @@ export class ProjectPageStore implements IProjectPageStore {
       createPage: action,
       removePage: action,
       movePage: action,
+      updatePageParent: action,
+      fetchBacklinks: action,
     });
     this.rootStore = store;
     // service
@@ -160,26 +167,83 @@ export class ProjectPageStore implements IProjectPageStore {
   });
 
   /**
-   * @description get the current project filtered page ids based on the pageType
+   * @description get the current project filtered root page ids based on the pageType
    * @param {TPageNavigationTabs} pageType
    */
   getCurrentProjectFilteredPageIdsByTab = computedFn((pageType: TPageNavigationTabs) => {
     const { projectId } = this.store.router;
     if (!projectId) return undefined;
 
-    // helps to filter pages based on the pageType
+    const searchQuery = this.filters.searchQuery.toLowerCase();
     const pagesByType = filterPagesByPageType(pageType, Object.values(this?.data || {}));
-    let filteredPages = pagesByType.filter(
-      (p) =>
-        p.project_ids?.includes(projectId) &&
-        getPageName(p.name).toLowerCase().includes(this.filters.searchQuery.toLowerCase()) &&
-        shouldFilterPage(p, this.filters.filters)
+    const projectPages = pagesByType.filter(
+      (p) => p.project_ids?.includes(projectId) && shouldFilterPage(p, this.filters.filters)
     );
-    filteredPages = orderPages(filteredPages, this.filters.sortKey, this.filters.sortBy);
 
-    const pages = (filteredPages.map((page) => page.id) as string[]) || undefined;
+    // When searching, return a flat match list. Otherwise return only roots for the tree.
+    if (searchQuery) {
+      let filteredPages = projectPages.filter((p) => getPageName(p.name).toLowerCase().includes(searchQuery));
+      filteredPages = orderPages(filteredPages, this.filters.sortKey, this.filters.sortBy);
+      return (filteredPages.map((page) => page.id) as string[]) || undefined;
+    }
 
-    return pages ?? undefined;
+    let rootPages = projectPages.filter((p) => !p.parent);
+    if (this.filters.sortKey && this.filters.sortKey !== "updated_at") {
+      rootPages = orderPages(rootPages, this.filters.sortKey, this.filters.sortBy);
+    } else {
+      rootPages = orderPageSiblings(rootPages);
+    }
+
+    return (rootPages.map((page) => page.id) as string[]) || undefined;
+  });
+
+  /**
+   * @description get child page ids for a parent, ordered by sort_order
+   */
+  getChildPageIds = computedFn((pageId: string, pageType: TPageNavigationTabs) => {
+    const { projectId } = this.store.router;
+    if (!projectId || !pageId) return [];
+
+    const pagesByType = filterPagesByPageType(pageType, Object.values(this?.data || {}));
+    const children = pagesByType.filter(
+      (p) => p.project_ids?.includes(projectId) && p.parent === pageId && shouldFilterPage(p, this.filters.filters)
+    );
+    return orderPageSiblings(children)
+      .map((page) => page.id)
+      .filter((id): id is string => !!id);
+  });
+
+  /**
+   * @description walk the parent chain for breadcrumbs (root first)
+   */
+  getPageAncestorIds = computedFn((pageId: string) => {
+    const ancestors: string[] = [];
+    const seen = new Set<string>();
+    let current = this.getPageById(pageId);
+    while (current?.parent) {
+      if (seen.has(current.parent)) break;
+      seen.add(current.parent);
+      ancestors.unshift(current.parent);
+      current = this.getPageById(current.parent);
+    }
+    return ancestors;
+  });
+
+  /**
+   * @description true when pageId is page or a descendant of ancestorId
+   */
+  isDescendantPage = computedFn((ancestorId: string, pageId: string) => {
+    if (!ancestorId || !pageId) return false;
+    if (ancestorId === pageId) return true;
+    let current = this.getPageById(pageId);
+    const seen = new Set<string>();
+    while (current?.parent) {
+      if (current.parent === ancestorId) return true;
+      if (seen.has(current.parent)) break;
+      seen.add(current.parent);
+      current = this.getPageById(current.parent);
+    }
+    return false;
   });
 
   /**
@@ -366,5 +430,43 @@ export class ProjectPageStore implements IProjectPageStore {
       console.error("Unable to move page", error);
       throw error;
     }
+  };
+
+  /**
+   * @description nest or un-nest a page by updating its parent and optional sort_order
+   */
+  updatePageParent = async (pageId: string, parentId: string | null, sortOrder?: number) => {
+    const page = this.getPageById(pageId);
+    const { workspaceSlug, projectId } = this.store.router;
+    if (!page || !workspaceSlug || !projectId) return;
+
+    if (parentId && this.isDescendantPage(pageId, parentId)) {
+      throw new Error("A page cannot be nested under itself or its descendants");
+    }
+
+    const previousParent = page.parent ?? null;
+    const previousSortOrder = page.sort_order;
+    runInAction(() => {
+      page.parent = parentId;
+      if (sortOrder !== undefined) page.sort_order = sortOrder;
+    });
+
+    try {
+      const payload: Partial<TPage> = { parent: parentId };
+      if (sortOrder !== undefined) payload.sort_order = sortOrder;
+      await this.service.update(workspaceSlug, projectId, pageId, payload);
+    } catch (error) {
+      runInAction(() => {
+        page.parent = previousParent;
+        page.sort_order = previousSortOrder;
+      });
+      throw error;
+    }
+  };
+
+  fetchBacklinks = async (pageId: string) => {
+    const { workspaceSlug, projectId } = this.store.router;
+    if (!workspaceSlug || !projectId || !pageId) return [];
+    return this.service.fetchBacklinks(workspaceSlug, projectId, pageId);
   };
 }

@@ -180,3 +180,25 @@ class PageVersion(BaseModel):
             else strip_tags(self.description_html)
         )
         super(PageVersion, self).save(*args, **kwargs)
+
+
+class PageLink(BaseModel):
+    """Directed edge from a source page to a target page (mention / cross-page link)."""
+
+    workspace = models.ForeignKey("db.Workspace", on_delete=models.CASCADE, related_name="page_links")
+    source_page = models.ForeignKey(Page, on_delete=models.CASCADE, related_name="outgoing_page_links")
+    target_page = models.ForeignKey(Page, on_delete=models.CASCADE, related_name="incoming_page_links")
+
+    class Meta:
+        verbose_name = "Page Link"
+        verbose_name_plural = "Page Links"
+        db_table = "page_links"
+        ordering = ("-created_at",)
+        unique_together = ["source_page", "target_page"]
+        indexes = [
+            models.Index(fields=["source_page"], name="pagelink_source_idx"),
+            models.Index(fields=["target_page"], name="pagelink_target_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.source_page_id} -> {self.target_page_id}"

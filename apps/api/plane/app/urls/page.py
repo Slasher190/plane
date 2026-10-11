@@ -73,4 +73,9 @@ urlpatterns = [
         PageDuplicateEndpoint.as_view(),
         name="page-duplicate",
     ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/backlinks/",
+        PageViewSet.as_view({"get": "backlinks"}),
+        name="project-page-backlinks",
+    ),
 ]
