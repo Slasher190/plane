@@ -52,8 +52,23 @@ export const EquationExtension = Node.create({
 
   addAttributes() {
     return {
-      latex: { default: "" },
-      display: { default: false },
+      latex: {
+        default: "",
+        parseHTML: (element) => element.getAttribute("data-latex") ?? element.getAttribute("latex") ?? "",
+        renderHTML: (attributes) => ({
+          "data-latex": attributes.latex ?? "",
+        }),
+      },
+      display: {
+        default: false,
+        parseHTML: (element) => {
+          const value = element.getAttribute("data-display") ?? element.getAttribute("display");
+          return value === "true" || value === "1";
+        },
+        renderHTML: (attributes) => ({
+          "data-display": attributes.display ? "true" : "false",
+        }),
+      },
     };
   },
 
