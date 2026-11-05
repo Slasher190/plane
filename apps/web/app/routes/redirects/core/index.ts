@@ -23,6 +23,10 @@ export const coreRedirectRoutes: RouteConfigEntry[] = [
   // → /settings/profile/api-tokens
   route(":workspaceSlug/settings/api-tokens", "routes/redirects/core/api-tokens.tsx"),
 
+  // Oneplace: removed upsell pages (paid active cycles, billing & plans) → workspace home
+  route(":workspaceSlug/active-cycles", "routes/redirects/core/removed-upsell.tsx", { id: "removed-active-cycles" }),
+  route(":workspaceSlug/settings/billing", "routes/redirects/core/removed-upsell.tsx", { id: "removed-billing" }),
+
   // Inbox redirect: /:workspaceSlug/projects/:projectId/inbox
   // → /:workspaceSlug/projects/:projectId/intake
   route(":workspaceSlug/projects/:projectId/inbox", "routes/redirects/core/inbox.tsx"),

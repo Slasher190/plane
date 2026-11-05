@@ -5,8 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-// components
-import { BulkOperationsUpgradeBanner } from "@/components/issues/bulk-operations/upgrade-banner";
 // hooks
 import { useMultipleSelectStore } from "@/hooks/store/use-multiple-select-store";
 import type { TSelectionHelper } from "@/hooks/use-multiple-select";
@@ -16,12 +14,9 @@ type Props = {
   selectionHelpers: TSelectionHelper;
 };
 
-export const IssueBulkOperationsRoot = observer(function IssueBulkOperationsRoot(props: Props) {
-  const { className, selectionHelpers } = props;
-  // store hooks
-  const { isSelectionActive } = useMultipleSelectStore();
-
-  if (!isSelectionActive || selectionHelpers.isSelectionDisabled) return null;
-
-  return <BulkOperationsUpgradeBanner className={className} />;
+// Oneplace: bulk operations are not part of CE; the upsell banner is removed.
+export const IssueBulkOperationsRoot = observer(function IssueBulkOperationsRoot(_props: Props) {
+  // store hooks (kept so selection state stays observed)
+  useMultipleSelectStore();
+  return null;
 });
