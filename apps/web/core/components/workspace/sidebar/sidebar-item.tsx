@@ -9,8 +9,8 @@ import { observer } from "mobx-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 // plane imports
+import { API_BASE_URL, EUserPermissionsLevel } from "@plane/constants";
 import type { IWorkspaceSidebarNavigationItem } from "@plane/constants";
-import { EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { joinUrlPath } from "@plane/utils";
 // components
@@ -49,6 +49,7 @@ export const SidebarItemBase = observer(function SidebarItemBase({
 
   const staticItems = [
     "home",
+    "chat",
     "pi_chat",
     "projects",
     "your_work",
@@ -64,18 +65,34 @@ export const SidebarItemBase = observer(function SidebarItemBase({
   if (!isPinned && !staticItems.includes(item.key)) return null;
 
   const itemHref =
-    item.key === "your_work" && data?.id ? joinUrlPath(slug, item.href, data?.id) : joinUrlPath(slug, item.href);
+    item.key === "chat"
+      ? `${API_BASE_URL}/api/workspaces/${slug}/chat/sso/`
+      : item.key === "your_work" && data?.id
+        ? joinUrlPath(slug, item.href, data?.id)
+        : joinUrlPath(slug, item.href);
   const icon = getSidebarNavigationItemIcon(item.key);
+
+  const navContent = (
+    <SidebarNavItem isActive={item.highlight(pathname, itemHref)}>
+      <div className="flex items-center gap-1.5 py-[1px]">
+        {icon}
+        <p className="text-13 leading-5 font-medium">{t(item.labelTranslationKey)}</p>
+      </div>
+      {additionalRender?.(item.key, slug)}
+    </SidebarNavItem>
+  );
+
+  if (item.external) {
+    return (
+      <a href={itemHref} onClick={handleLinkClick}>
+        {navContent}
+      </a>
+    );
+  }
 
   return (
     <Link href={itemHref} onClick={handleLinkClick}>
-      <SidebarNavItem isActive={item.highlight(pathname, itemHref)}>
-        <div className="flex items-center gap-1.5 py-[1px]">
-          {icon}
-          <p className="text-13 leading-5 font-medium">{t(item.labelTranslationKey)}</p>
-        </div>
-        {additionalRender?.(item.key, slug)}
-      </SidebarNavItem>
+      {navContent}
     </Link>
   );
 });

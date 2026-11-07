@@ -48,4 +48,20 @@ export const coreRedirectRoutes: RouteConfigEntry[] = [
 
   // Register redirect
   route("register", "routes/redirects/core/register.tsx"),
+
+  // ========================================================================
+  // ROCKET.CHAT PREFIX RECOVERY (subpath /chat)
+  // ========================================================================
+  // RC client sometimes drops /chat and hits Plane at /group, /direct, etc.
+  route("home", "routes/redirects/core/rocketchat-prefix.tsx"),
+  route("group/*", "routes/redirects/core/rocketchat-prefix.tsx"),
+  route("channel/*", "routes/redirects/core/rocketchat-prefix.tsx"),
+  route("direct/*", "routes/redirects/core/rocketchat-prefix.tsx"),
+  route("admin/*", "routes/redirects/core/rocketchat-prefix.tsx"),
+  route("account/*", "routes/redirects/core/rocketchat-prefix.tsx"),
+  route("directory", "routes/redirects/core/rocketchat-prefix.tsx"),
+  route("directory/*", "routes/redirects/core/rocketchat-prefix.tsx"),
+  route("composer/*", "routes/redirects/core/rocketchat-prefix.tsx"),
+  route("lists/*", "routes/redirects/core/rocketchat-prefix.tsx"),
+  route("omnichannel/*", "routes/redirects/core/rocketchat-prefix.tsx"),
 ];

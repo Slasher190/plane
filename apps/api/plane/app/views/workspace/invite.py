@@ -26,6 +26,7 @@ from plane.app.serializers import (
     WorkSpaceMemberSerializer,
 )
 from plane.app.views.base import BaseAPIView
+from plane.app.services.rocketchat import sync_workspace_member
 from plane.bgtasks.event_tracking_task import track_event
 from plane.bgtasks.workspace_invitation_task import workspace_invitation
 from plane.db.models import User, Workspace, WorkspaceMember, WorkspaceMemberInvite
@@ -231,6 +232,11 @@ class WorkspaceJoinEndpoint(BaseAPIView):
                             "joined_at": str(timezone.now()),
                         },
                     )
+
+                    try:
+                        sync_workspace_member(workspace_invite.workspace, user, remove=False)
+                    except Exception:
+                        pass
 
                     # Delete the invitation
                     workspace_invite.delete()

@@ -36,6 +36,8 @@ from plane.app.views import (
     WorkspaceHomePreferenceViewSet,
     WorkspaceStickyViewSet,
     WorkspaceUserPreferenceViewSet,
+    WorkspaceChatSSOEndpoint,
+    WorkspaceChatStatusEndpoint,
 )
 
 
@@ -61,6 +63,16 @@ urlpatterns = [
             }
         ),
         name="workspace",
+    ),
+    path(
+        "workspaces/<str:slug>/chat/sso/",
+        WorkspaceChatSSOEndpoint.as_view(),
+        name="workspace-chat-sso",
+    ),
+    path(
+        "workspaces/<str:slug>/chat/status/",
+        WorkspaceChatStatusEndpoint.as_view(),
+        name="workspace-chat-status",
     ),
     path(
         "workspaces/<str:slug>/invitations/",

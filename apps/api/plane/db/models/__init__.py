@@ -76,6 +76,7 @@ from .workspace import (
     WorkspaceHomePreference,
     WorkspaceUserPreference,
 )
+from .rocketchat import RocketChatWorkspaceLink, RocketChatUserLink
 
 from .favorite import UserFavorite
 

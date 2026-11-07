@@ -21,6 +21,7 @@ from plane.app.serializers import (
     WorkSpaceMemberSerializer,
 )
 from plane.app.views.base import BaseAPIView
+from plane.app.services.rocketchat import sync_workspace_member
 from plane.db.models import Project, ProjectMember, WorkspaceMember, DraftIssue
 from plane.utils.cache import invalidate_cache
 
@@ -147,6 +148,10 @@ class WorkSpaceMemberViewSet(BaseViewSet):
 
         workspace_member.is_active = False
         workspace_member.save()
+        try:
+            sync_workspace_member(workspace_member.workspace, workspace_member.member, remove=True)
+        except Exception:
+            pass
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @invalidate_cache(

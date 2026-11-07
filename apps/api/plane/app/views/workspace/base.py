@@ -47,6 +47,7 @@ from plane.utils.constants import RESTRICTED_WORKSPACE_SLUGS
 from plane.license.utils.instance_value import get_configuration_value
 from plane.bgtasks.workspace_seed_task import workspace_seed
 from plane.bgtasks.event_tracking_task import track_event
+from plane.app.services.rocketchat import rename_rc_team, sync_workspace
 from plane.utils.url import contains_url
 from plane.utils.analytics_events import WORKSPACE_CREATED, WORKSPACE_DELETED
 from plane.utils.csv_utils import sanitize_csv_row
@@ -152,6 +153,13 @@ class WorkSpaceViewSet(BaseViewSet):
                     },
                 )
 
+                # Mirror workspace into Oneplace Chat (Rocket.Chat team)
+                try:
+                    workspace = Workspace.objects.get(id=serializer.data["id"])
+                    sync_workspace(workspace, owner=request.user)
+                except Exception:
+                    pass
+
                 return Response(data, status=status.HTTP_201_CREATED)
             return Response(
                 [serializer.errors[error][0] for error in serializer.errors],
@@ -171,7 +179,14 @@ class WorkSpaceViewSet(BaseViewSet):
 
     @allow_permission([ROLE.ADMIN], level="WORKSPACE")
     def partial_update(self, request, *args, **kwargs):
-        return super().partial_update(request, *args, **kwargs)
+        response = super().partial_update(request, *args, **kwargs)
+        if response.status_code < 400 and ("name" in request.data or "slug" in request.data):
+            try:
+                workspace = self.get_object()
+                rename_rc_team(workspace)
+            except Exception:
+                pass
+        return response
 
     def remove_last_workspace_ids_from_user_settings(self, id: uuid.UUID) -> None:
         """
