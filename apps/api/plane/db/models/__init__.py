@@ -77,6 +77,7 @@ from .workspace import (
     WorkspaceUserPreference,
 )
 from .rocketchat import RocketChatWorkspaceLink, RocketChatUserLink
+from .affine import AffineWorkspaceLink, AffineProjectLink, AffinePageLink
 
 from .favorite import UserFavorite
 
