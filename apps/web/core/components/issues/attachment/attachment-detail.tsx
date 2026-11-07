@@ -53,7 +53,7 @@ export const IssueAttachmentsDetail = observer(function IssueAttachmentsDetail(p
   // derived values
   const attachment = attachmentId ? getAttachmentById(attachmentId) : undefined;
   const fileName = getFileName(attachment?.attributes.name ?? "");
-  const fileExtension = getFileExtension(attachment?.asset_url ?? "");
+  const fileExtension = getFileExtension(attachment?.attributes.name ?? "");
   const fileIcon = getFileIcon(fileExtension, 28);
   const fileURL = getFileURL(attachment?.asset_url ?? "");
   // hooks
@@ -72,7 +72,7 @@ export const IssueAttachmentsDetail = observer(function IssueAttachmentsDetail(p
         />
       )}
       <div className="flex h-[60px] items-center justify-between gap-1 rounded-md border-[2px] border-subtle bg-surface-1 px-4 py-2 text-13">
-        <Link href={fileURL ?? ""} target="_blank" rel="noopener noreferrer">
+        <Link href={fileURL ?? ""} target="_blank" rel="noopener noreferrer" download>
           <div className="flex items-center gap-3">
             <div className="h-7 w-7">{fileIcon}</div>
             <div className="flex flex-col gap-1">

@@ -611,6 +611,7 @@
       "archive": "Archive",
       "restore": "Restore",
       "delete": "Delete",
+      "download": "Download",
       "remove_relation": "Remove relation",
       "subscribe": "Subscribe",
       "unsubscribe": "Unsubscribe",

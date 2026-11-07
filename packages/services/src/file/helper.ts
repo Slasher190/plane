@@ -11,6 +11,49 @@ import type { TFileMetaDataLite, TFileSignedURLResponse } from "@plane/types";
 import { DANGEROUS_EXTENSIONS } from "@plane/constants";
 
 /**
+ * Extension → MIME for types that magic-byte detection often misses
+ * (HTML, CSV, plain text) or that browsers report inconsistently.
+ */
+const EXTENSION_MIME_MAP: Record<string, string> = {
+  pdf: "application/pdf",
+  html: "text/html",
+  htm: "text/html",
+  xhtml: "application/xhtml+xml",
+  zip: "application/zip",
+  csv: "text/csv",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  xls: "application/vnd.ms-excel",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  txt: "text/plain",
+  md: "text/markdown",
+  markdown: "text/markdown",
+  json: "application/json",
+  xml: "application/xml",
+  css: "text/css",
+  js: "text/javascript",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+  svg: "image/svg+xml",
+  bmp: "image/bmp",
+  tif: "image/tiff",
+  tiff: "image/tiff",
+  avif: "image/avif",
+  heic: "image/heic",
+  heif: "image/heif",
+  ico: "image/x-icon",
+  rar: "application/x-rar-compressed",
+  "7z": "application/x-7z-compressed",
+  tar: "application/x-tar",
+  gz: "application/gzip",
+};
+
+/**
  * @description Filename validation - checks for double extensions and dangerous patterns
  * @param {string} filename
  * @returns {string | null} Error message if invalid, null if valid
@@ -82,8 +125,17 @@ const detectMimeTypeFromSignature = async (file: File): Promise<string> => {
 };
 
 /**
- * @description Validate and detect the MIME type of a file using signature detection
- * Also performs basic security checks on filename
+ * @description Infer MIME type from filename extension
+ */
+const detectMimeTypeFromExtension = (filename: string): string => {
+  const extension = filename.split(".").pop()?.toLowerCase() || "";
+  return EXTENSION_MIME_MAP[extension] || "";
+};
+
+/**
+ * @description Validate and detect the MIME type of a file using signature detection,
+ * then fall back to the browser-reported type and filename extension.
+ * Also performs basic security checks on filename.
  * @param {File} file
  * @returns {Promise<string>} validated and detected MIME type
  */
@@ -103,7 +155,17 @@ const validateAndDetectFileType = async (file: File): Promise<string> => {
     console.warn("Error detecting file type from signature:", _error);
   }
 
-  // fallback for unknown files
+  // Browser-reported MIME (works for HTML/CSV when magic bytes are absent)
+  if (file.type) {
+    return file.type;
+  }
+
+  // Extension map for environments that leave File.type empty
+  const extensionType = detectMimeTypeFromExtension(file.name);
+  if (extensionType) {
+    return extensionType;
+  }
+
   return "";
 };
 

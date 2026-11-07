@@ -80,6 +80,7 @@ from plane.db.models import (
 )
 from plane.settings.storage import S3Storage
 from plane.utils.path_validator import sanitize_filename
+from plane.utils.attachment_mime import resolve_attachment_mime_type
 from plane.utils.order_queryset import (
     ACTIVITY_ORDER_BY_ALLOWLIST,
     ISSUE_ORDER_BY_ALLOWLIST,
@@ -1898,7 +1899,7 @@ class IssueAttachmentListCreateAPIEndpoint(BaseAPIView):
             )
 
         name = sanitize_filename(request.data.get("name"))
-        type = request.data.get("type", False)
+        type = resolve_attachment_mime_type(name, request.data.get("type") or None)
         size = request.data.get("size")
         external_id = request.data.get("external_id")
         external_source = request.data.get("external_source")
@@ -1912,7 +1913,7 @@ class IssueAttachmentListCreateAPIEndpoint(BaseAPIView):
 
         size_limit = min(size, settings.FILE_SIZE_LIMIT)
 
-        if not type or type not in settings.ATTACHMENT_MIME_TYPES:
+        if not type:
             return Response(
                 {"error": "Invalid file type.", "status": False},
                 status=status.HTTP_400_BAD_REQUEST,

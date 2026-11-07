@@ -474,12 +474,18 @@ INSTANCE_CHANGELOG_URL = os.environ.get("INSTANCE_CHANGELOG_URL", "")
 ATTACHMENT_MIME_TYPES = [
     # Images
     "image/jpeg",
+    "image/jpg",
     "image/png",
     "image/gif",
     "image/svg+xml",
     "image/webp",
     "image/tiff",
     "image/bmp",
+    "image/avif",
+    "image/heic",
+    "image/heif",
+    "image/x-icon",
+    "image/vnd.microsoft.icon",
     # Documents
     "application/pdf",
     "application/msword",
@@ -490,6 +496,8 @@ ATTACHMENT_MIME_TYPES = [
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     "text/plain",
     "text/markdown",
+    "text/html",
+    "application/xhtml+xml",
     "application/rtf",
     "application/vnd.oasis.opendocument.spreadsheet",
     "application/vnd.oasis.opendocument.text",
@@ -552,6 +560,8 @@ ATTACHMENT_MIME_TYPES = [
     "application/json",
     "text/xml",
     "text/csv",
+    "application/csv",
+    "text/comma-separated-values",
     "application/xml",
     # SQL
     "application/x-sql",
