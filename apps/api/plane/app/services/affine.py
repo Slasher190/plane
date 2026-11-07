@@ -81,3 +81,53 @@ class AffineImportClient:
 
     def upsert_folders(self, workspace_id: str, nodes: List[dict]) -> dict:
         return self._req("POST", f"/workspaces/{workspace_id}/folders", json={"nodes": nodes})
+
+
+# Providers whose API is OpenAI-compatible (AFFiNE BYOK "openai_compatible" endpoint).
+OPENAI_COMPATIBLE_PROVIDERS = {"ollama", "openrouter", "litellm", "azure", "openai"}
+
+
+def docs_ai_settings():
+    """God-mode → AI settings as used by Oneplace Docs: (provider, base_url, api_key, [models])."""
+    from plane.license.utils.instance_value import get_configuration_value
+
+    provider, base_url, api_key, model, fallbacks = get_configuration_value(
+        [
+            {"key": "LLM_PROVIDER", "default": os.environ.get("LLM_PROVIDER", "")},
+            {"key": "LLM_BASE_URL", "default": os.environ.get("LLM_BASE_URL", "")},
+            {"key": "LLM_API_KEY", "default": os.environ.get("LLM_API_KEY", "")},
+            {"key": "LLM_MODEL", "default": os.environ.get("LLM_MODEL", "")},
+            {"key": "LLM_FALLBACK_MODELS", "default": os.environ.get("LLM_FALLBACK_MODELS", "")},
+        ]
+    )
+    if (provider or "").lower() == "ollama" and not base_url:
+        base_url = os.environ.get("OLLAMA_BASE_URL", "https://ollama.com/v1")
+    models = [m.strip() for m in [model or ""] + (fallbacks or "").split(",") if m and m.strip()]
+    return (provider or "").lower(), (base_url or "").strip(), api_key or "", list(dict.fromkeys(models))
+
+
+def sync_docs_ai():
+    """Push god-mode AI settings to every linked Oneplace Docs workspace.
+
+    Returns a list of (affine_workspace_id, result-or-error) for reporting.
+    """
+    from plane.db.models import AffineWorkspaceLink
+
+    provider, base_url, api_key, models = docs_ai_settings()
+    if provider not in OPENAI_COMPATIBLE_PROVIDERS:
+        return [("-", f"skipped: provider {provider or 'unset'} is not OpenAI-compatible")]
+    if not base_url or not models:
+        return [("-", "skipped: base URL or model missing in god-mode → AI")]
+    client = AffineImportClient()
+    results = []
+    for link in AffineWorkspaceLink.objects.all():
+        try:
+            res = client._req(
+                "POST",
+                f"/workspaces/{link.affine_workspace_id}/ai",
+                json={"baseUrl": base_url, "apiKey": api_key, "models": models},
+            )
+            results.append((link.affine_workspace_id, res))
+        except Exception as exc:  # report, never raise into the god-mode save
+            results.append((link.affine_workspace_id, f"error: {exc}"))
+    return results

@@ -85,6 +85,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
       LLM_MODEL: config["LLM_MODEL"] || "openai/gpt-4o-mini",
       LLM_API_KEY: config["LLM_API_KEY"] || "",
       LLM_BASE_URL: config["LLM_BASE_URL"] || "https://openrouter.ai/api/v1",
+      LLM_FALLBACK_MODELS: config["LLM_FALLBACK_MODELS"] || "",
     },
   });
 
@@ -190,6 +191,30 @@ export function InstanceAIForm(props: IInstanceAIForm) {
           <p className="text-11 text-tertiary">
             OpenRouter: https://openrouter.ai/api/v1. Ollama Cloud: https://ollama.com/v1. Gateway:
             http://litellm:4000/v1. Azure: your resource endpoint.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-1 lg:col-span-2">
+          <h4 className="text-13 text-tertiary">Fallback models</h4>
+          <Controller
+            control={control}
+            name="LLM_FALLBACK_MODELS"
+            render={({ field: { value, onChange, ref } }) => (
+              <Input
+                id="LLM_FALLBACK_MODELS"
+                name="LLM_FALLBACK_MODELS"
+                type="text"
+                value={value}
+                onChange={onChange}
+                ref={ref}
+                placeholder="e.g. qwen3-coder:480b-cloud, deepseek-v3.1:671b-cloud"
+                className="w-full rounded-md font-medium"
+              />
+            )}
+          />
+          <p className="text-11 text-tertiary">
+            Comma-separated, tried in order when the main model fails. Saving this form also updates Oneplace Docs AI
+            (same endpoint, API key, main model and fallbacks).
           </p>
         </div>
       </div>

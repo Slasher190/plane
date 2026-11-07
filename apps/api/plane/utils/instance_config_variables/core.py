@@ -238,6 +238,13 @@ llm_config_variables = [
         "category": "AI",
         "is_encrypted": False,
     },
+    # Oneplace: comma-separated models tried after LLM_MODEL (used by Oneplace Docs AI)
+    {
+        "key": "LLM_FALLBACK_MODELS",
+        "value": os.environ.get("LLM_FALLBACK_MODELS", ""),
+        "category": "AI",
+        "is_encrypted": False,
+    },
     # Deprecated, use LLM_MODEL
     {
         "key": "GPT_ENGINE",

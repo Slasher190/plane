@@ -55,6 +55,12 @@ class InstanceConfigurationEndpoint(BaseAPIView):
 
         InstanceConfiguration.objects.bulk_update(bulk_configurations, ["value"], batch_size=100)
 
+        # Oneplace: god-mode → AI is the single place for AI keys/models; mirror to Docs.
+        if any(str(key).startswith("LLM_") for key in request.data.keys()):
+            from plane.bgtasks.docs_ai_sync_task import sync_docs_ai_task
+
+            sync_docs_ai_task.delay()
+
         serializer = InstanceConfigurationSerializer(configurations, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
