@@ -24,7 +24,9 @@ class OneplaceOIDCValidator(OAuth2Validator):
 
     def get_additional_claims(self, request):
         user = request.user
-        full_name = " ".join(part for part in (user.first_name, user.last_name) if part).strip()
+        first, last = (user.first_name or "").strip(), (user.last_name or "").strip()
+        # Some accounts already hold the full name in first_name ("Sudhi Ranjan Gupta" + "Gupta").
+        full_name = first if last and first.endswith(last) else " ".join(p for p in (first, last) if p)
         return {
             "email": user.email,
             "email_verified": True,

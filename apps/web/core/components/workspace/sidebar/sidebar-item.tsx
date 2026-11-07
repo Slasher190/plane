@@ -50,6 +50,7 @@ export const SidebarItemBase = observer(function SidebarItemBase({
   const staticItems = [
     "home",
     "chat",
+    "docs",
     "pi_chat",
     "projects",
     "your_work",
@@ -67,9 +68,11 @@ export const SidebarItemBase = observer(function SidebarItemBase({
   const itemHref =
     item.key === "chat"
       ? `${API_BASE_URL}/api/workspaces/${slug}/chat/sso/`
-      : item.key === "your_work" && data?.id
-        ? joinUrlPath(slug, item.href, data?.id)
-        : joinUrlPath(slug, item.href);
+      : item.key === "docs"
+        ? `${API_BASE_URL}/api/workspaces/${slug}/docs/sso/`
+        : item.key === "your_work" && data?.id
+          ? joinUrlPath(slug, item.href, data?.id)
+          : joinUrlPath(slug, item.href);
   const icon = getSidebarNavigationItemIcon(item.key);
 
   const navContent = (

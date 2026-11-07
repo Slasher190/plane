@@ -283,11 +283,21 @@ export const WORKSPACE_SIDEBAR_STATIC_NAVIGATION_ITEMS: Record<string, IWorkspac
     highlight: () => false,
     external: true,
   },
+  docs: {
+    key: "docs",
+    labelTranslationKey: "sidebar.docs",
+    // Resolved in SidebarItemBase to /api/workspaces/{slug}/docs/sso/ (Oneplace Docs / AFFiNE)
+    href: `/docs/sso/`,
+    access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER, EUserWorkspaceRoles.GUEST],
+    highlight: () => false,
+    external: true,
+  },
 };
 
 export const WORKSPACE_SIDEBAR_STATIC_NAVIGATION_ITEMS_LINKS: IWorkspaceSidebarNavigationItem[] = [
   WORKSPACE_SIDEBAR_STATIC_NAVIGATION_ITEMS["home"],
   WORKSPACE_SIDEBAR_STATIC_NAVIGATION_ITEMS["chat"],
+  WORKSPACE_SIDEBAR_STATIC_NAVIGATION_ITEMS["docs"],
 ];
 
 export const WORKSPACE_SIDEBAR_STATIC_PINNED_NAVIGATION_ITEMS_LINKS: IWorkspaceSidebarNavigationItem[] = [

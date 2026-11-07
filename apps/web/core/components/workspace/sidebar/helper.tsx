@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { MessageSquare } from "lucide-react";
+import { BookOpen, MessageSquare } from "lucide-react";
 import {
   AnalyticsIcon,
   ArchiveIcon,
@@ -43,5 +43,7 @@ export const getSidebarNavigationItemIcon = (key: string, className: string = ""
       return <MultipleStickyIcon className={cn("size-4 flex-shrink-0", className)} />;
     case "chat":
       return <MessageSquare className={cn("size-4 flex-shrink-0", className)} />;
+    case "docs":
+      return <BookOpen className={cn("size-4 flex-shrink-0", className)} />;
   }
 };
