@@ -34,6 +34,7 @@ export const RESTRICTED_URLS: string[] = [
   "silo",
   "chat",
   "mcp",
+  "docs",
   "calendar",
   "drive",
   "channels",

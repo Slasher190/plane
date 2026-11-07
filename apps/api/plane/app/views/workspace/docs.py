@@ -3,7 +3,7 @@
 # See the LICENSE file for details.
 
 import os
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 from django.http import HttpResponseRedirect
 from rest_framework import status
@@ -29,4 +29,6 @@ class WorkspaceDocsSSOEndpoint(BaseAPIView):
         if not docs_enabled():
             return Response({"error": "Oneplace Docs is not enabled"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         base = os.environ["AFFINE_PUBLIC_URL"].rstrip("/")
-        return HttpResponseRedirect(f"{base}/oauth/login?" + urlencode({"provider": "OIDC", "redirect_uri": "/"}))
+        # Land on Docs home; with a sub-path deployment (/docs) that is "/docs/", not the site root.
+        home = (urlparse(base).path or "").rstrip("/") + "/"
+        return HttpResponseRedirect(f"{base}/oauth/login?" + urlencode({"provider": "OIDC", "redirect_uri": home}))
