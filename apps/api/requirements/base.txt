@@ -50,6 +50,8 @@ beautifulsoup4==4.12.3
 posthog==3.5.0
 # crypto
 cryptography==50.0.0
+# OpenID Connect provider (Oneplace Docs sign-in)
+django-oauth-toolkit==3.4.1
 # html validator
 lxml==6.1.0
 # s3

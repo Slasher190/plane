@@ -23,6 +23,9 @@ export const coreRedirectRoutes: RouteConfigEntry[] = [
   // → /settings/profile/api-tokens
   route(":workspaceSlug/settings/api-tokens", "routes/redirects/core/api-tokens.tsx"),
 
+  // Oneplace Docs sign-in: hand /auth/oidc/resume/:key back to the API (full page load)
+  route("auth/oidc/resume/:key", "routes/redirects/core/oidc-resume.tsx"),
+
   // Oneplace: removed upsell pages (paid active cycles, billing & plans) → workspace home
   route(":workspaceSlug/active-cycles", "routes/redirects/core/removed-upsell.tsx", { id: "removed-active-cycles" }),
   route(":workspaceSlug/settings/billing", "routes/redirects/core/removed-upsell.tsx", { id: "removed-billing" }),

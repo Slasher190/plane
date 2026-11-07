@@ -111,6 +111,8 @@ INSTALLED_APPS = [
     "plane.license",
     "plane.api",
     "plane.authentication",
+    "oauth2_provider",
+    "plane.oidc",
     # Third-party things
     "rest_framework",
     "corsheaders",
@@ -155,6 +157,21 @@ API_KEY_RATE_LIMIT = os.environ.get("API_KEY_RATE_LIMIT", "60/minute")
 
 # Django Auth Backend
 AUTHENTICATION_BACKENDS = ("django.contrib.auth.backends.ModelBackend",)  # default
+
+# Oneplace as an OpenID Connect provider (Oneplace Docs / AFFiNE sign-in).
+# OIDC_RSA_PRIVATE_KEY: PEM, newlines may be written as "\n" in the env file.
+OIDC_RSA_PRIVATE_KEY = os.environ.get("OIDC_RSA_PRIVATE_KEY", "").replace("\\n", "\n")
+OAUTH2_PROVIDER = {
+    "OIDC_ENABLED": bool(OIDC_RSA_PRIVATE_KEY),
+    "OIDC_RSA_PRIVATE_KEY": OIDC_RSA_PRIVATE_KEY,
+    "OAUTH2_VALIDATOR_CLASS": "plane.oidc.validators.OneplaceOIDCValidator",
+    "SCOPES": {"openid": "OpenID Connect", "profile": "Profile", "email": "Email"},
+    "DEFAULT_SCOPES": ["openid"],
+    "PKCE_REQUIRED": True,
+    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,
+}
+if os.environ.get("OIDC_ISSUER"):
+    OAUTH2_PROVIDER["OIDC_ISS_ENDPOINT"] = os.environ["OIDC_ISSUER"].rstrip("/")
 
 # Root Urls
 ROOT_URLCONF = "plane.urls"
