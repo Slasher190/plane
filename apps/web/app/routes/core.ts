@@ -189,21 +189,13 @@ export const coreRoutes: RouteConfigEntry[] = [
             ),
           ]),
 
-          // Page Detail
-          layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/pages/(detail)/layout.tsx", [
-            route(
-              ":workspaceSlug/projects/:projectId/pages/:pageId",
-              "./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/pages/(detail)/[pageId]/page.tsx"
-            ),
-          ]),
-
-          // Pages List
-          layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/pages/(list)/layout.tsx", [
-            route(
-              ":workspaceSlug/projects/:projectId/pages",
-              "./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/pages/(list)/page.tsx"
-            ),
-          ]),
+          // Pages → Oneplace Docs (AFFiNE). The old Pages screens were removed; git history has them.
+          route(":workspaceSlug/projects/:projectId/pages/:pageId", "routes/redirects/core/pages-to-docs.tsx", {
+            id: "pages-detail-to-docs",
+          }),
+          route(":workspaceSlug/projects/:projectId/pages", "routes/redirects/core/pages-to-docs.tsx", {
+            id: "pages-list-to-docs",
+          }),
           // Intake list
           layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/intake/layout.tsx", [
             route(
